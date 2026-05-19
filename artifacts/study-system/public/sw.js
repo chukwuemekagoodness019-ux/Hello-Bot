@@ -2,7 +2,7 @@
 // Caches the app shell (HTML/CSS/JS/icons) so the UI loads when offline.
 // Never caches /api/* requests — those always go to the network so AI/auth/payments stay live.
 
-const CACHE_VERSION = "ai-study-v1";
+const CACHE_VERSION = "ai-study-v3";
 const APP_SHELL = [
   "./",
   "./index.html",

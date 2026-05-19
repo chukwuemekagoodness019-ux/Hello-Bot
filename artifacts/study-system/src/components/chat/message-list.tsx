@@ -8,6 +8,7 @@ import type { ChatMessage } from "@/hooks/use-chat-history";
 interface MessageListProps {
   messages: ChatMessage[];
   isPending?: boolean;
+  isUploading?: boolean;
   streamingMessage?: string;
   error?: string | null;
   onRetry?: () => void;
@@ -53,6 +54,7 @@ function MarkdownContent({ content }: { content: string }) {
 export function MessageList({
   messages,
   isPending,
+  isUploading,
   streamingMessage,
   error,
   onRetry,
@@ -215,8 +217,22 @@ export function MessageList({
         </div>
       )}
 
+      {/* File upload / OCR processing indicator */}
+      {isUploading && (
+        <div className="flex items-start">
+          <div className="bg-card border border-primary/30 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-2 text-sm shadow-sm">
+            <div className="flex gap-1 items-center">
+              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "160ms" }} />
+              <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "320ms" }} />
+            </div>
+            <span className="italic text-xs text-muted-foreground">Analysing file… please wait</span>
+          </div>
+        </div>
+      )}
+
       {/* Thinking dots — shown before stream starts */}
-      {isPending && (
+      {isPending && !isUploading && (
         <div className="flex items-start">
           <div className="bg-card border border-border px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-2 text-muted-foreground text-sm shadow-sm">
             <span

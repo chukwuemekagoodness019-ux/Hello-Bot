@@ -379,6 +379,7 @@ export default function ChatPage() {
           <MessageList
             messages={visibleMessages}
             isPending={isPending}
+            isUploading={isUploading}
             streamingMessage={streamingContent || undefined}
             error={localError}
             onRetry={handleRetry}
