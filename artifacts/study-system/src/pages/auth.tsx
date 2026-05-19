@@ -68,31 +68,31 @@ export default function AuthPage() {
     <div className="min-h-[100dvh] bg-background flex flex-col items-center justify-center px-4">
       <div className="w-full max-w-sm">
         <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-primary/10 mb-4">
+          <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl glass border border-primary/30 shadow-xl shadow-indigo-900/20 mb-4">
             <GraduationCap className="w-7 h-7 text-primary" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight">Study AI</h1>
-          <p className="text-sm text-muted-foreground mt-1">Your AI-powered academic companion</p>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Study AI</h1>
+          <p className="text-sm text-slate-400 mt-1">Your AI-powered academic companion</p>
         </div>
 
-        <div className="bg-card border border-border rounded-2xl shadow-sm overflow-hidden">
-          <div className="flex border-b border-border">
+        <div className="glass border border-white/8 rounded-2xl shadow-2xl shadow-black/40 overflow-hidden">
+          <div className="flex border-b border-white/8">
             <button
               onClick={() => switchTab("register")}
-              className={`flex-1 py-3 text-sm font-medium transition-colors ${
+              className={`flex-1 py-3 text-sm font-medium transition-all duration-150 ${
                 tab === "register"
-                  ? "text-foreground border-b-2 border-primary -mb-px bg-card"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "text-white border-b-2 border-primary -mb-px"
+                  : "text-slate-400 hover:text-slate-200"
               }`}
             >
               Create Account
             </button>
             <button
               onClick={() => switchTab("login")}
-              className={`flex-1 py-3 text-sm font-medium transition-colors ${
+              className={`flex-1 py-3 text-sm font-medium transition-all duration-150 ${
                 tab === "login"
-                  ? "text-foreground border-b-2 border-primary -mb-px bg-card"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "text-white border-b-2 border-primary -mb-px"
+                  : "text-slate-400 hover:text-slate-200"
               }`}
             >
               Sign In
@@ -102,35 +102,35 @@ export default function AuthPage() {
           <form onSubmit={handleSubmit} className="p-6 space-y-4">
             {tab === "register" && (
               <div className="space-y-1.5">
-                <Label htmlFor="displayName">Your Name</Label>
+                <Label htmlFor="displayName" className="text-slate-300">Your Name</Label>
                 <Input
                   id="displayName"
                   type="text"
                   placeholder="e.g. Amara Okonkwo"
                   value={displayName}
                   onChange={(e) => setDisplayName(e.target.value)}
-                  className="h-11"
+                  className="h-11 bg-white/5 border-white/10 text-slate-100 placeholder:text-slate-500 focus:border-primary/60"
                   autoComplete="name"
                 />
               </div>
             )}
 
             <div className="space-y-1.5">
-              <Label htmlFor="email">Email Address</Label>
+              <Label htmlFor="email" className="text-slate-300">Email Address</Label>
               <Input
                 id="email"
                 type="email"
                 placeholder="you@example.com"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                className="h-11"
+                className="h-11 bg-white/5 border-white/10 text-slate-100 placeholder:text-slate-500 focus:border-primary/60"
                 required
                 autoComplete={tab === "register" ? "email" : "username"}
               />
             </div>
 
             <div className="space-y-1.5">
-              <Label htmlFor="password">Password</Label>
+              <Label htmlFor="password" className="text-slate-300">Password</Label>
               <div className="relative">
                 <Input
                   id="password"
@@ -138,7 +138,7 @@ export default function AuthPage() {
                   placeholder={tab === "register" ? "At least 6 characters" : "Enter your password"}
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="h-11 pr-10"
+                  className="h-11 pr-10 bg-white/5 border-white/10 text-slate-100 placeholder:text-slate-500 focus:border-primary/60"
                   required
                   minLength={tab === "register" ? 6 : 1}
                   autoComplete={tab === "register" ? "new-password" : "current-password"}
@@ -146,7 +146,7 @@ export default function AuthPage() {
                 <button
                   type="button"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground transition-colors"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition-colors"
                   tabIndex={-1}
                 >
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -155,12 +155,16 @@ export default function AuthPage() {
             </div>
 
             {error && (
-              <p className="text-sm text-red-500 bg-red-500/10 border border-red-500/20 rounded-lg px-3 py-2">
+              <p className="text-sm text-red-400 bg-red-500/10 border border-red-500/20 rounded-xl px-3 py-2">
                 {error}
               </p>
             )}
 
-            <Button type="submit" className="w-full h-11 text-sm font-medium" disabled={loading}>
+            <Button
+              type="submit"
+              className="w-full h-11 text-sm font-semibold bg-primary hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/30 transition-all duration-150"
+              disabled={loading}
+            >
               {loading
                 ? tab === "register"
                   ? "Creating account…"
@@ -171,21 +175,21 @@ export default function AuthPage() {
             </Button>
 
             {tab === "register" && (
-              <p className="text-xs text-muted-foreground text-center leading-relaxed">
+              <p className="text-xs text-slate-500 text-center leading-relaxed">
                 By creating an account you agree to our terms of service. Your study data stays private.
               </p>
             )}
           </form>
         </div>
 
-        <p className="text-center text-xs text-muted-foreground mt-6">
+        <p className="text-center text-xs text-slate-500 mt-6">
           {tab === "register" ? (
             <>Already have an account?{" "}
-              <button onClick={() => switchTab("login")} className="text-primary hover:underline font-medium">Sign in</button>
+              <button onClick={() => switchTab("login")} className="text-primary hover:text-indigo-400 transition-colors font-medium">Sign in</button>
             </>
           ) : (
             <>Don't have an account?{" "}
-              <button onClick={() => switchTab("register")} className="text-primary hover:underline font-medium">Create one</button>
+              <button onClick={() => switchTab("register")} className="text-primary hover:text-indigo-400 transition-colors font-medium">Create one</button>
             </>
           )}
         </p>

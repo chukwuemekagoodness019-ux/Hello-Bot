@@ -218,23 +218,23 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
       <input type="file" ref={pdfInputRef} onChange={handlePdfChange} accept="application/pdf" className="hidden" />
 
       {isListening && (
-        <div className="absolute -top-14 left-1/2 -translate-x-1/2 bg-card border border-primary text-primary px-4 py-2 rounded-full shadow-lg flex items-center gap-2 animate-in zoom-in duration-200 z-10 whitespace-nowrap">
+        <div className="absolute -top-14 left-1/2 -translate-x-1/2 glass border border-primary/40 text-primary px-4 py-2 rounded-full shadow-xl shadow-indigo-900/30 flex items-center gap-2 animate-in zoom-in duration-200 z-10 whitespace-nowrap">
           <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
-          <span className="text-sm font-medium">Listening… tap + to stop</span>
+          <span className="text-sm font-medium">Listening… tap mic to stop</span>
         </div>
       )}
 
       {feedbackOpen && (
         <div
-          className="fixed inset-0 bg-background/60 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
+          className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-end sm:items-center justify-center p-4"
           onClick={(e) => e.target === e.currentTarget && setFeedbackOpen(false)}
         >
-          <div className="w-full max-w-sm bg-card border border-border rounded-2xl shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-4 py-3 border-b border-border">
-              <h3 className="font-semibold text-sm">Send Feedback</h3>
+          <div className="w-full max-w-sm glass border border-white/10 rounded-2xl shadow-2xl overflow-hidden animate-in slide-in-from-bottom-4 duration-300">
+            <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
+              <h3 className="font-semibold text-sm text-slate-100">Send Feedback</h3>
               <button
                 onClick={() => setFeedbackOpen(false)}
-                className="text-muted-foreground hover:text-foreground transition-colors"
+                className="text-slate-400 hover:text-slate-200 transition-colors"
                 aria-label="Close"
               >
                 <X className="w-4 h-4" />
@@ -243,17 +243,17 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
             {feedbackDone ? (
               <div className="p-8 text-center">
                 <div className="text-3xl mb-2">✓</div>
-                <p className="text-sm text-muted-foreground">Thanks for your feedback!</p>
+                <p className="text-sm text-slate-400">Thanks for your feedback!</p>
               </div>
             ) : (
               <form onSubmit={handleFeedbackSubmit} className="p-4 space-y-3">
                 <select
                   value={feedbackCategory}
                   onChange={(e) => setFeedbackCategory(e.target.value)}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:ring-1 focus:ring-primary"
                 >
                   {FEEDBACK_CATEGORIES.map((c) => (
-                    <option key={c.id} value={c.id}>{c.label}</option>
+                    <option key={c.id} value={c.id} className="bg-slate-900">{c.label}</option>
                   ))}
                 </select>
                 <textarea
@@ -261,12 +261,12 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
                   onChange={(e) => setFeedbackMsg(e.target.value)}
                   placeholder="Describe your issue or feedback…"
                   rows={4}
-                  className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+                  className="w-full bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-sm text-slate-200 placeholder:text-slate-500 resize-none focus:outline-none focus:ring-1 focus:ring-primary"
                   required
                 />
                 <Button
                   type="submit"
-                  className="w-full"
+                  className="w-full bg-primary hover:bg-primary/90"
                   size="sm"
                   disabled={feedbackSubmitting || !feedbackMsg.trim()}
                 >
@@ -281,11 +281,11 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
       {menuOpen && (
         <div
           ref={menuRef}
-          className="absolute bottom-full left-0 mb-2 bg-card border border-border rounded-xl shadow-lg z-50 overflow-hidden animate-in slide-in-from-bottom-2 duration-150 min-w-[180px]"
+          className="absolute bottom-full left-0 mb-2 glass border border-white/10 rounded-xl shadow-2xl shadow-black/40 z-50 overflow-hidden animate-in slide-in-from-bottom-2 duration-150 min-w-[180px]"
         >
           {flags.image_upload && (
             <button
-              className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-accent transition-colors text-left"
+              className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/8 transition-colors text-left text-slate-200"
               onClick={() => { setMenuOpen(false); setTimeout(() => imageInputRef.current?.click(), 0); }}
               disabled={disabled}
             >
@@ -295,9 +295,9 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
           )}
           {flags.pdf_upload && (
             <>
-              {flags.image_upload && <div className="h-px bg-border mx-3" />}
+              {flags.image_upload && <div className="h-px bg-white/8 mx-3" />}
               <button
-                className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-accent transition-colors text-left"
+                className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/8 transition-colors text-left text-slate-200"
                 onClick={() => { setMenuOpen(false); setTimeout(() => pdfInputRef.current?.click(), 0); }}
                 disabled={disabled}
               >
@@ -308,9 +308,9 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
           )}
           {flags.voice && (
             <>
-              {hasSeparatorBeforeVoice && <div className="h-px bg-border mx-3" />}
+              {hasSeparatorBeforeVoice && <div className="h-px bg-white/8 mx-3" />}
               <button
-                className={`w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-accent transition-colors text-left ${isListening ? "text-red-500" : ""}`}
+                className={`w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/8 transition-colors text-left ${isListening ? "text-red-400" : "text-slate-200"}`}
                 onClick={handleVoiceToggle}
               >
                 {isListening
@@ -320,21 +320,21 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
               </button>
             </>
           )}
-          {hasSeparatorBeforeFeedback && <div className="h-px bg-border mx-3" />}
+          {hasSeparatorBeforeFeedback && <div className="h-px bg-white/8 mx-3" />}
           <button
-            className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-accent transition-colors text-left"
+            className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/8 transition-colors text-left text-slate-200"
             onClick={() => { setMenuOpen(false); setFeedbackOpen(true); }}
           >
-            <MessageSquarePlus className="w-4 h-4 text-muted-foreground shrink-0" />
+            <MessageSquarePlus className="w-4 h-4 text-slate-400 shrink-0" />
             <span>Send Feedback</span>
           </button>
         </div>
       )}
 
-      <div className="flex flex-col bg-card rounded-2xl border border-border shadow-sm focus-within:ring-1 focus-within:ring-primary focus-within:border-primary transition-all">
+      <div className="flex flex-col glass border border-white/8 rounded-2xl shadow-xl shadow-black/30 focus-within:border-primary/50 focus-within:shadow-indigo-900/20 transition-all duration-200">
         {pendingFile && (
           <div className="flex items-center gap-2 px-3 pt-2.5">
-            <div className="flex items-center gap-2 bg-primary/10 border border-primary/20 text-primary rounded-lg px-3 py-1.5 text-sm max-w-full">
+            <div className="flex items-center gap-2 bg-primary/15 border border-primary/25 text-primary rounded-lg px-3 py-1.5 text-sm max-w-full">
               {pendingFile.type.startsWith("image/") ? (
                 <Image className="w-3.5 h-3.5 shrink-0" />
               ) : (
@@ -349,7 +349,7 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
                 <X className="w-3.5 h-3.5" />
               </button>
             </div>
-            <span className="text-xs text-muted-foreground">+ add instruction below</span>
+            <span className="text-xs text-slate-500">+ add instruction below</span>
           </div>
         )}
 
@@ -358,12 +358,12 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
             <Button
               variant="ghost"
               size="icon"
-              className={`w-8 h-8 rounded-full transition-colors ${
+              className={`w-8 h-8 rounded-full transition-all duration-150 ${
                 menuOpen
-                  ? "bg-primary/15 text-primary ring-1 ring-primary"
+                  ? "bg-primary/20 text-primary ring-1 ring-primary/40"
                   : isListening
-                  ? "bg-red-500/20 text-red-500 ring-1 ring-red-500/50"
-                  : "text-muted-foreground hover:text-foreground"
+                  ? "bg-red-500/20 text-red-400 ring-1 ring-red-500/40 animate-pulse"
+                  : "text-slate-400 hover:text-slate-200 hover:bg-white/8"
               }`}
               disabled={disabled}
               onClick={() => setMenuOpen((o) => !o)}
@@ -378,8 +378,8 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={pendingFile ? "Add an instruction (optional)… (Ctrl+Enter to send)" : "Ask a question… (Ctrl+Enter to send, Enter for new line)"}
-            className="min-h-[44px] max-h-32 bg-transparent border-0 focus-visible:ring-0 resize-none p-2.5 shadow-none text-base placeholder:text-muted-foreground/60"
+            placeholder={pendingFile ? "Add an instruction (optional)… (Ctrl+Enter to send)" : "Ask a question… (Ctrl+Enter to send)"}
+            className="min-h-[44px] max-h-32 bg-transparent border-0 focus-visible:ring-0 resize-none p-2.5 shadow-none text-base text-slate-100 placeholder:text-slate-500"
             rows={1}
             disabled={disabled}
           />
@@ -389,10 +389,10 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
               <Button
                 variant="ghost"
                 size="icon"
-                className={`w-8 h-8 rounded-full transition-colors ${
+                className={`w-8 h-8 rounded-full transition-all duration-150 ${
                   isListening
-                    ? "bg-red-500/20 text-red-500 ring-1 ring-red-500/50 animate-pulse"
-                    : "text-muted-foreground hover:text-blue-400"
+                    ? "bg-red-500/20 text-red-400 ring-1 ring-red-500/40 animate-pulse"
+                    : "text-slate-400 hover:text-blue-400 hover:bg-blue-500/10"
                 }`}
                 disabled={disabled}
                 onClick={handleVoiceToggle}
@@ -403,7 +403,7 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
             )}
             <Button
               size="icon"
-              className="w-8 h-8 rounded-full bg-primary hover:bg-primary/90 text-primary-foreground shadow-sm transition-transform active:scale-95 disabled:opacity-30"
+              className="w-8 h-8 rounded-full bg-primary hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/40 transition-all duration-150 active:scale-95 disabled:opacity-30"
               onClick={handleSend}
               disabled={!canSend}
               title="Send (Ctrl+Enter)"

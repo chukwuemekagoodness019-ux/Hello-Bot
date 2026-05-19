@@ -309,22 +309,22 @@ export default function ChatPage() {
     <div className="flex h-[100dvh] w-full bg-background text-foreground overflow-hidden">
       {sidebarOpen && (
         <div
-          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 transition-all duration-300 md:hidden"
+          className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-all duration-300 md:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       <div
-        className={`fixed inset-y-0 left-0 z-50 w-[85%] max-w-sm bg-sidebar border-r border-sidebar-border transform transition-transform duration-300 ease-in-out ${
+        className={`fixed inset-y-0 left-0 z-50 w-[85%] max-w-sm bg-sidebar border-r border-white/8 transform transition-transform duration-300 ease-in-out ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        } md:translate-x-0 md:static md:w-80 flex-shrink-0`}
+        } md:translate-x-0 md:static md:w-72 flex-shrink-0`}
       >
         <ChatSidebar onClose={() => setSidebarOpen(false)} />
       </div>
 
       <div className="flex-1 flex flex-col h-full relative min-w-0 overflow-hidden">
         {/* Header */}
-        <header className="h-14 flex items-center justify-between px-4 border-b border-border bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60 sticky top-0 z-30 shrink-0">
+        <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30 shrink-0">
           <div className="flex items-center gap-2">
             <Button
               variant="ghost"
@@ -387,13 +387,13 @@ export default function ChatPage() {
         </div>
 
         {/* Input bar — fixed above bottom nav on mobile */}
-        <div className="fixed left-0 right-0 bottom-[56px] md:static md:bottom-auto p-3 bg-background border-t border-border z-30 shrink-0">
+        <div className="fixed left-0 right-0 bottom-[56px] md:static md:bottom-auto p-3 glass-subtle border-t border-white/8 z-30 shrink-0">
           <InputBar onSend={handleSend} onUpload={handleUpload} disabled={isBusy || isOffline} />
         </div>
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 inset-x-0 z-20 bg-background/95 backdrop-blur border-t border-border flex md:hidden h-14">
+      <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden h-14">
         <button
           className="flex-1 flex flex-col items-center justify-center gap-0.5 text-primary"
           onClick={() => setSidebarOpen(false)}
@@ -402,14 +402,14 @@ export default function ChatPage() {
           <span className="text-[10px] font-medium">Chat</span>
         </button>
         <button
-          className="flex-1 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors"
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors"
           onClick={() => setLocation("/quiz")}
         >
           <GraduationCap className="w-5 h-5" />
           <span className="text-[10px] font-medium">Quiz</span>
         </button>
         <button
-          className="flex-1 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors"
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors"
           onClick={() => setLocation("/exam")}
         >
           <FileText className="w-5 h-5" />

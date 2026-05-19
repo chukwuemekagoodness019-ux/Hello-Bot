@@ -45,7 +45,7 @@ function getVoice(gender: VoiceGender): SpeechSynthesisVoice | null {
 
 function MarkdownContent({ content }: { content: string }) {
   return (
-    <div className="prose prose-sm dark:prose-invert prose-p:leading-relaxed prose-p:my-2 prose-pre:bg-muted prose-pre:text-muted-foreground prose-headings:text-foreground prose-strong:text-foreground prose-li:my-0.5 max-w-none">
+    <div className="ai-prose max-w-none">
       <ReactMarkdown remarkPlugins={[remarkGfm]}>{content}</ReactMarkdown>
     </div>
   );
@@ -63,12 +63,10 @@ export function MessageList({
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
   const [voiceGender, setVoiceGender] = useState<VoiceGender>("default");
 
-  // Smooth scroll when a new message lands or pending state changes
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages, isPending]);
 
-  // Instant scroll during token streaming (avoids jank on every delta)
   useEffect(() => {
     if (streamingMessage) {
       bottomRef.current?.scrollIntoView({ behavior: "auto" });
@@ -125,12 +123,12 @@ export function MessageList({
 
   if (messages.length === 0 && !streamingMessage && !isPending) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center space-y-4 opacity-50 max-w-md mx-auto">
-        <div className="w-16 h-16 rounded-2xl bg-primary/20 flex items-center justify-center">
+      <div className="flex flex-col items-center justify-center h-full text-center space-y-4 max-w-md mx-auto">
+        <div className="w-16 h-16 rounded-2xl glass border border-white/10 flex items-center justify-center shadow-xl">
           <span className="text-3xl">📚</span>
         </div>
-        <p className="text-xl font-medium text-foreground">Ready to study?</p>
-        <p className="text-sm text-muted-foreground">
+        <p className="text-xl font-semibold text-slate-100">Ready to study?</p>
+        <p className="text-sm text-slate-400 leading-relaxed">
           Ask a question, upload your notes or PDF, or take a quick quiz.
         </p>
       </div>
@@ -140,18 +138,18 @@ export function MessageList({
   return (
     <div className="max-w-3xl mx-auto flex flex-col gap-5 pb-4">
       {hasAssistantMsg && (
-        <div className="flex items-center justify-end gap-1 opacity-60 hover:opacity-100 transition-opacity">
-          <span className="text-[10px] text-muted-foreground uppercase tracking-wider mr-1">
+        <div className="flex items-center justify-end gap-1 opacity-50 hover:opacity-100 transition-opacity duration-200">
+          <span className="text-[10px] text-slate-400 uppercase tracking-wider mr-1">
             Voice:
           </span>
           {(["default", "female", "male"] as VoiceGender[]).map((g) => (
             <button
               key={g}
               onClick={() => setVoiceGender(g)}
-              className={`text-[10px] px-2 py-0.5 rounded-full border transition-colors ${
+              className={`text-[10px] px-2 py-0.5 rounded-full border transition-all duration-150 ${
                 voiceGender === g
-                  ? "bg-primary/15 border-primary/40 text-primary font-medium"
-                  : "border-border text-muted-foreground hover:border-primary/30"
+                  ? "bg-primary/20 border-primary/50 text-primary font-medium"
+                  : "border-white/10 text-slate-400 hover:border-primary/30 hover:text-slate-300"
               }`}
             >
               {g === "default" ? "Auto" : g.charAt(0).toUpperCase() + g.slice(1)}
@@ -163,17 +161,19 @@ export function MessageList({
       {messages.map((msg, idx) => (
         <div
           key={idx}
-          className={`flex flex-col ${msg.role === "user" ? "items-end" : "items-start"}`}
+          className={`flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300 ${
+            msg.role === "user" ? "items-end" : "items-start"
+          }`}
         >
           <div
             className={`max-w-[88%] px-4 py-3 rounded-2xl ${
               msg.role === "user"
-                ? "bg-primary text-primary-foreground rounded-br-sm"
-                : "bg-card border border-border rounded-bl-sm shadow-sm"
+                ? "bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-br-sm shadow-lg shadow-indigo-900/30"
+                : "glass border border-white/8 rounded-bl-sm shadow-xl"
             }`}
           >
             {msg.role === "user" ? (
-              <div className="whitespace-pre-wrap text-sm leading-relaxed">
+              <div className="whitespace-pre-wrap text-sm leading-relaxed text-white">
                 {msg.content}
               </div>
             ) : (
@@ -183,10 +183,10 @@ export function MessageList({
 
           {msg.role === "assistant" && (
             <button
-              className={`mt-1 flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs transition-colors ${
+              className={`mt-1 flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs transition-all duration-150 ${
                 speakingIdx === idx
-                  ? "text-primary bg-primary/10"
-                  : "text-muted-foreground hover:text-foreground hover:bg-accent"
+                  ? "text-primary bg-primary/15"
+                  : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
               }`}
               onClick={() => handleTTS(msg.content, idx)}
               title={speakingIdx === idx ? "Stop" : "Listen"}
@@ -207,10 +207,10 @@ export function MessageList({
         </div>
       ))}
 
-      {/* Live streaming message — appears while AI is responding token-by-token */}
+      {/* Live streaming message */}
       {streamingMessage !== undefined && streamingMessage.length > 0 && (
-        <div className="flex flex-col items-start">
-          <div className="max-w-[88%] px-4 py-3 rounded-2xl bg-card border border-border rounded-bl-sm shadow-sm">
+        <div className="flex flex-col items-start animate-in fade-in duration-200">
+          <div className="max-w-[88%] px-4 py-3 rounded-2xl glass border border-white/8 rounded-bl-sm shadow-xl">
             <MarkdownContent content={streamingMessage} />
             <span className="inline-block w-0.5 h-4 bg-primary/70 ml-0.5 animate-pulse align-text-bottom" />
           </div>
@@ -219,47 +219,40 @@ export function MessageList({
 
       {/* File upload / OCR processing indicator */}
       {isUploading && (
-        <div className="flex items-start">
-          <div className="bg-card border border-primary/30 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-2 text-sm shadow-sm">
+        <div className="flex items-start animate-in fade-in duration-200">
+          <div className="glass border border-primary/30 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-3 shadow-xl">
             <div className="flex gap-1 items-center">
               <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
               <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "160ms" }} />
               <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "320ms" }} />
             </div>
-            <span className="italic text-xs text-muted-foreground">Analysing file… please wait</span>
+            <span className="italic text-xs text-slate-400">Analysing file… please wait</span>
           </div>
         </div>
       )}
 
-      {/* Thinking dots — shown before stream starts */}
+      {/* Thinking dots */}
       {isPending && !isUploading && (
-        <div className="flex items-start">
-          <div className="bg-card border border-border px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-2 text-muted-foreground text-sm shadow-sm">
-            <span
-              className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce"
-              style={{ animationDelay: "0ms" }}
-            />
-            <span
-              className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce"
-              style={{ animationDelay: "160ms" }}
-            />
-            <span
-              className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce"
-              style={{ animationDelay: "320ms" }}
-            />
-            <span className="ml-1 italic text-xs">AI is thinking…</span>
+        <div className="flex items-start animate-in fade-in duration-200">
+          <div className="glass border border-white/8 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-3 shadow-xl">
+            <div className="flex gap-1 items-center">
+              <span className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce" style={{ animationDelay: "160ms" }} />
+              <span className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce" style={{ animationDelay: "320ms" }} />
+            </div>
+            <span className="italic text-xs text-slate-400">AI is thinking…</span>
           </div>
         </div>
       )}
 
       {error && (
         <div className="flex flex-col items-center justify-center py-4 text-center">
-          <div className="flex items-center gap-2 text-destructive bg-destructive/10 px-4 py-2 rounded-lg mb-2">
+          <div className="flex items-center gap-2 text-red-400 bg-red-500/10 border border-red-500/20 px-4 py-2 rounded-xl mb-2">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span className="text-sm font-medium">{error}</span>
           </div>
           {onRetry && (
-            <Button variant="outline" size="sm" onClick={onRetry} className="gap-2">
+            <Button variant="outline" size="sm" onClick={onRetry} className="gap-2 glass border-white/10 hover:border-white/20">
               <RefreshCw className="w-4 h-4" />
               Retry
             </Button>

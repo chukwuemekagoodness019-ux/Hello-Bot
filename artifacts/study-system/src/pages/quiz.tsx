@@ -133,30 +133,30 @@ export default function QuizPage() {
   if (!flags.quiz) {
     return (
       <div className="min-h-[100dvh] bg-background text-foreground flex flex-col pb-14 md:pb-0">
-        <header className="h-14 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur z-30">
-          <button className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setLocation("/", { replace: true })}>
+        <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
+          <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
           </button>
-          <span className="font-semibold text-sm flex items-center gap-1.5">
+          <span className="font-semibold text-sm flex items-center gap-1.5 text-slate-100">
             <GraduationCap className="w-4 h-4 text-primary" />Practice Quiz
           </span>
           <div className="w-24" />
         </header>
         <main className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-sm mx-auto">
-          <div className="w-14 h-14 bg-muted rounded-2xl flex items-center justify-center mb-4">
-            <GraduationCap className="w-7 h-7 text-muted-foreground" />
+          <div className="w-14 h-14 glass border border-white/10 rounded-2xl flex items-center justify-center mb-4">
+            <GraduationCap className="w-7 h-7 text-slate-400" />
           </div>
-          <h2 className="text-xl font-bold mb-2">Quiz Unavailable</h2>
-          <p className="text-muted-foreground text-sm">This feature is temporarily unavailable. Please check back later.</p>
+          <h2 className="text-xl font-bold mb-2 text-white">Quiz Unavailable</h2>
+          <p className="text-slate-400 text-sm">This feature is temporarily unavailable. Please check back later.</p>
         </main>
-        <nav className="fixed bottom-0 inset-x-0 z-20 bg-background/95 backdrop-blur border-t border-border flex md:hidden h-14">
-          <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setLocation("/", { replace: true })}>
+        <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden h-14">
+          <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
           </button>
           <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-primary">
             <GraduationCap className="w-5 h-5" /><span className="text-[10px] font-medium">Quiz</span>
           </button>
-          <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setLocation("/exam", { replace: true })}>
+          <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/exam", { replace: true })}>
             <FileText className="w-5 h-5" /><span className="text-[10px] font-medium">Exam</span>
           </button>
         </nav>
@@ -166,14 +166,14 @@ export default function QuizPage() {
 
   return (
     <div className="min-h-[100dvh] bg-background text-foreground flex flex-col pb-14 md:pb-0">
-      <header className="h-14 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur z-30">
+      <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
         <button
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors"
           onClick={() => setLocation("/", { replace: true })}
         >
           <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
         </button>
-        <span className="font-semibold text-sm flex items-center gap-1.5">
+        <span className="font-semibold text-sm flex items-center gap-1.5 text-slate-100">
           <GraduationCap className="w-4 h-4 text-primary" />Practice Quiz
         </span>
         {state === "running" ? (
@@ -367,14 +367,14 @@ export default function QuizPage() {
         )}
       </main>
 
-      <nav className="fixed bottom-0 inset-x-0 z-20 bg-background/95 backdrop-blur border-t border-border flex md:hidden h-14">
-        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setLocation("/", { replace: true })}>
+      <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden h-14">
+        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/", { replace: true })}>
           <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
         </button>
         <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-primary">
           <GraduationCap className="w-5 h-5" /><span className="text-[10px] font-medium">Quiz</span>
         </button>
-        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setLocation("/exam", { replace: true })}>
+        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/exam", { replace: true })}>
           <FileText className="w-5 h-5" /><span className="text-[10px] font-medium">Exam</span>
         </button>
       </nav>

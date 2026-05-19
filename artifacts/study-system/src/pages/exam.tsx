@@ -393,7 +393,7 @@ export default function ExamPage() {
   const userLoaded = user !== undefined;
 
   const BottomNav = () => (
-    <nav className="fixed bottom-0 inset-x-0 z-20 bg-background/95 backdrop-blur border-t border-border flex md:hidden h-14">
+    <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden h-14">
       <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setLocation("/", { replace: true })}>
         <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
       </button>
@@ -421,7 +421,7 @@ export default function ExamPage() {
   if (!flags.exam) {
     return (
       <div className="min-h-[100dvh] bg-background text-foreground flex flex-col pb-14 md:pb-0">
-        <header className="h-14 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur z-30">
+        <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
           <button className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
           </button>
@@ -446,7 +446,7 @@ export default function ExamPage() {
   if (userLoaded && !isPremium && state === "form" && !autoJoining) {
     return (
       <div className="min-h-[100dvh] bg-background text-foreground flex flex-col pb-14 md:pb-0">
-        <header className="h-14 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur z-30">
+        <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
           <button className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
           </button>
@@ -504,7 +504,7 @@ export default function ExamPage() {
 
   return (
     <div className="min-h-[100dvh] bg-background text-foreground flex flex-col pb-14 md:pb-0">
-      <header className="h-14 flex items-center justify-between px-4 border-b border-border sticky top-0 bg-background/95 backdrop-blur z-30">
+      <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
         <button
           className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
           onClick={() => setLocation("/", { replace: true })}
@@ -898,7 +898,7 @@ export default function ExamPage() {
       </main>
 
       {state === "running" && (
-        <div className="fixed bottom-14 md:bottom-0 left-0 right-0 p-4 bg-background/95 backdrop-blur border-t border-border z-30">
+        <div className="fixed bottom-14 md:bottom-0 left-0 right-0 p-4 glass-subtle border-t border-white/8 z-30">
           <div className="max-w-2xl mx-auto flex gap-3 items-center">
             <div className="flex-1 text-sm text-muted-foreground">
               {answeredCount < totalQuestions
