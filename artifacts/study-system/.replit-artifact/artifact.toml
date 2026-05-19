@@ -1,0 +1,31 @@
+kind = "web"
+previewPath = "/"
+title = "AI Study System"
+version = "1.0.0"
+id = "artifacts/study-system"
+router = "path"
+
+[[integratedSkills]]
+name = "react-vite"
+version = "1.0.0"
+
+[[services]]
+name = "web"
+paths = [ "/" ]
+localPort = 21318
+
+[services.development]
+run = "pnpm --filter @workspace/study-system run dev"
+
+[services.production]
+build = [ "pnpm", "--filter", "@workspace/study-system", "run", "build" ]
+publicDir = "artifacts/study-system/dist/public"
+serve = "static"
+
+[[services.production.rewrites]]
+from = "/*"
+to = "/index.html"
+
+[services.env]
+PORT = "21318"
+BASE_PATH = "/"

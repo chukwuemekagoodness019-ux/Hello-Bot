@@ -3,20 +3,31 @@ info:
   # Do not change the title, if the title changes, the import paths will be broken
   title: Api
   version: 0.1.0
-  description: API specification
+  description: AI Study System API
 servers:
   - url: /api
     description: Base API path
 tags:
   - name: health
     description: Health operations
+  - name: user
+    description: User session, limits, streak
+  - name: chat
+    description: Chat with the AI tutor
+  - name: upload
+    description: Upload an image for AI vision analysis
+  - name: quiz
+    description: Quiz generation and submission
+  - name: payment
+    description: Payment submission and details
+  - name: admin
+    description: Admin operations
 paths:
   /healthz:
     get:
       operationId: healthCheck
       tags: [health]
       summary: Health check
-      description: Returns server health status
       responses:
         "200":
           description: Healthy
@@ -24,13 +35,657 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/HealthStatus"
+  /me:
+    get:
+      operationId: getMe
+      tags: [user]
+      summary: Get current user state (limits, premium, streak)
+      responses:
+        "200":
+          description: User state
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UserState"
+  /chat:
+    post:
+      operationId: sendChat
+      tags: [chat]
+      summary: Send a message and receive an AI response
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SendChatBody"
+      responses:
+        "200":
+          description: AI reply
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ChatReply"
+        "402":
+          description: Limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitError"
+  /upload:
+    post:
+      operationId: uploadFile
+      tags: [upload]
+      summary: Upload an image; returns AI vision analysis
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [file]
+              properties:
+                file:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Summary
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadResult"
+        "402":
+          description: Limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitError"
+        "400":
+          description: Bad file
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /quiz/generate:
+    post:
+      operationId: generateQuiz
+      tags: [quiz]
+      summary: Generate a new quiz
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/GenerateQuizBody"
+      responses:
+        "200":
+          description: Generated quiz
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Quiz"
+        "402":
+          description: Limit reached
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/LimitError"
+        "400":
+          description: Bad input
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /quiz/submit:
+    post:
+      operationId: submitQuiz
+      tags: [quiz]
+      summary: Submit a finished quiz and get scored results
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/SubmitQuizBody"
+      responses:
+        "200":
+          description: Quiz results
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/QuizResult"
+  /payment/info:
+    get:
+      operationId: getPaymentInfo
+      tags: [payment]
+      summary: Get OPay payment details and pricing
+      responses:
+        "200":
+          description: Payment info
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentInfo"
+  /payment/submit:
+    post:
+      operationId: submitPayment
+      tags: [payment]
+      summary: Submit a manual payment proof
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required: [plan, transactionId]
+              properties:
+                plan:
+                  type: string
+                  enum: [week, month]
+                transactionId:
+                  type: string
+                screenshot:
+                  type: string
+                  format: binary
+      responses:
+        "200":
+          description: Payment submitted
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/PaymentSubmission"
+  /admin/login:
+    post:
+      operationId: adminLogin
+      tags: [admin]
+      summary: Admin login (secret key + password)
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/AdminLoginBody"
+      responses:
+        "200":
+          description: Admin token
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminToken"
+        "401":
+          description: Invalid credentials
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ApiError"
+  /admin/users:
+    get:
+      operationId: adminListUsers
+      tags: [admin]
+      summary: List all users (admin)
+      parameters:
+        - $ref: "#/components/parameters/AdminToken"
+      responses:
+        "200":
+          description: List of users
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminUser"
+  /admin/payments:
+    get:
+      operationId: adminListPayments
+      tags: [admin]
+      summary: List all payment submissions (admin)
+      parameters:
+        - $ref: "#/components/parameters/AdminToken"
+      responses:
+        "200":
+          description: Payments
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: "#/components/schemas/AdminPayment"
+  /admin/payments/{id}/approve:
+    post:
+      operationId: adminApprovePayment
+      tags: [admin]
+      summary: Approve a payment and upgrade user
+      parameters:
+        - $ref: "#/components/parameters/AdminToken"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Approved
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPayment"
+  /admin/payments/{id}/reject:
+    post:
+      operationId: adminRejectPayment
+      tags: [admin]
+      summary: Reject a payment
+      parameters:
+        - $ref: "#/components/parameters/AdminToken"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Rejected
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminPayment"
+  /admin/users/{id}/upgrade:
+    post:
+      operationId: adminUpgradeUser
+      tags: [admin]
+      summary: Manually upgrade a user
+      parameters:
+        - $ref: "#/components/parameters/AdminToken"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/UpgradeUserBody"
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
+  /admin/users/{id}/revoke:
+    post:
+      operationId: adminRevokeUser
+      tags: [admin]
+      summary: Revoke a user's premium access
+      parameters:
+        - $ref: "#/components/parameters/AdminToken"
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        "200":
+          description: Updated user
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/AdminUser"
 components:
+  parameters:
+    AdminToken:
+      name: x-admin-token
+      in: header
+      required: true
+      schema:
+        type: string
   schemas:
     HealthStatus:
       type: object
       properties:
         status:
           type: string
+      required: [status]
+    ApiError:
+      type: object
+      properties:
+        error:
+          type: string
+      required: [error]
+    LimitError:
+      type: object
+      properties:
+        error:
+          type: string
+        code:
+          type: string
+        kind:
+          type: string
+          enum: [message, quiz, voice]
+      required: [error, code, kind]
+    UserState:
+      type: object
+      properties:
+        id:
+          type: integer
+        isPremium:
+          type: boolean
+        premiumUntil:
+          type: string
+          nullable: true
+        limits:
+          type: object
+          properties:
+            messagesUsed:
+              type: integer
+            messagesLimit:
+              type: integer
+            quizzesUsed:
+              type: integer
+            quizzesLimit:
+              type: integer
+            voiceUsed:
+              type: integer
+            voiceLimit:
+              type: integer
+          required:
+            - messagesUsed
+            - messagesLimit
+            - quizzesUsed
+            - quizzesLimit
+            - voiceUsed
+            - voiceLimit
+        streak:
+          type: object
+          properties:
+            currentStreak:
+              type: integer
+            bestStreak:
+              type: integer
+            bestScore:
+              type: integer
+            lastActiveDate:
+              type: string
+              nullable: true
+          required:
+            - currentStreak
+            - bestStreak
+            - bestScore
+            - lastActiveDate
+      required: [id, isPremium, premiumUntil, limits, streak]
+    ChatMessage:
+      type: object
+      properties:
+        role:
+          type: string
+          enum: [user, assistant, system]
+        content:
+          type: string
+      required: [role, content]
+    SendChatBody:
+      type: object
+      properties:
+        messages:
+          type: array
+          items:
+            $ref: "#/components/schemas/ChatMessage"
+        usedVoice:
+          type: boolean
+      required: [messages]
+    ChatReply:
+      type: object
+      properties:
+        reply:
+          type: string
+      required: [reply]
+    UploadResult:
+      type: object
+      properties:
+        kind:
+          type: string
+          enum: [image]
+        filename:
+          type: string
+        excerpt:
+          type: string
+        summary:
+          type: string
+      required: [kind, filename, excerpt, summary]
+    GenerateQuizBody:
+      type: object
+      properties:
+        subject:
+          type: string
+        difficulty:
+          type: string
+          enum: [easy, medium, hard]
+        questionType:
+          type: string
+          enum: [objective, theory, fill]
+        numQuestions:
+          type: integer
+          minimum: 1
+          maximum: 30
+        timeMinutes:
+          type: integer
+          minimum: 1
+          maximum: 120
+        instructions:
+          type: string
+      required: [subject, difficulty, questionType, numQuestions, timeMinutes]
+    QuizQuestion:
+      type: object
+      properties:
+        id:
+          type: string
+        prompt:
+          type: string
+        type:
+          type: string
+          enum: [objective, theory, fill]
+        options:
+          type: array
+          items:
+            type: string
+      required: [id, prompt, type]
+    Quiz:
+      type: object
+      properties:
+        quizId:
+          type: string
+        subject:
+          type: string
+        difficulty:
+          type: string
+        questionType:
+          type: string
+        timeMinutes:
+          type: integer
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizQuestion"
+      required: [quizId, subject, difficulty, questionType, timeMinutes, questions]
+    QuizAnswer:
+      type: object
+      properties:
+        questionId:
+          type: string
+        answer:
+          type: string
+      required: [questionId, answer]
+    SubmitQuizBody:
+      type: object
+      properties:
+        quizId:
+          type: string
+        subject:
+          type: string
+        difficulty:
+          type: string
+        questionType:
+          type: string
+        questions:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizQuestion"
+        answers:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizAnswer"
+      required: [quizId, subject, difficulty, questionType, questions, answers]
+    QuizQuestionResult:
+      type: object
+      properties:
+        questionId:
+          type: string
+        prompt:
+          type: string
+        userAnswer:
+          type: string
+        correctAnswer:
+          type: string
+        isCorrect:
+          type: boolean
+        explanation:
+          type: string
       required:
+        - questionId
+        - prompt
+        - userAnswer
+        - correctAnswer
+        - isCorrect
+        - explanation
+    QuizResult:
+      type: object
+      properties:
+        quizId:
+          type: string
+        score:
+          type: integer
+        total:
+          type: integer
+        percent:
+          type: integer
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/QuizQuestionResult"
+      required: [quizId, score, total, percent, results]
+    PaymentInfo:
+      type: object
+      properties:
+        accountName:
+          type: string
+        accountNumber:
+          type: string
+        provider:
+          type: string
+        plans:
+          type: array
+          items:
+            type: object
+            properties:
+              id:
+                type: string
+                enum: [week, month]
+              label:
+                type: string
+              priceLabel:
+                type: string
+            required: [id, label, priceLabel]
+      required: [accountName, accountNumber, provider, plans]
+    PaymentSubmission:
+      type: object
+      properties:
+        id:
+          type: integer
+        plan:
+          type: string
+        transactionId:
+          type: string
+        status:
+          type: string
+        createdAt:
+          type: string
+      required: [id, plan, transactionId, status, createdAt]
+    AdminLoginBody:
+      type: object
+      properties:
+        secretKey:
+          type: string
+        password:
+          type: string
+      required: [secretKey, password]
+    AdminToken:
+      type: object
+      properties:
+        token:
+          type: string
+      required: [token]
+    AdminUser:
+      type: object
+      properties:
+        id:
+          type: integer
+        createdAt:
+          type: string
+        isPremium:
+          type: boolean
+        premiumUntil:
+          type: string
+          nullable: true
+        currentStreak:
+          type: integer
+        bestStreak:
+          type: integer
+        bestScore:
+          type: integer
+        messagesUsedToday:
+          type: integer
+        quizzesUsedToday:
+          type: integer
+      required:
+        - id
+        - createdAt
+        - isPremium
+        - premiumUntil
+        - currentStreak
+        - bestStreak
+        - bestScore
+        - messagesUsedToday
+        - quizzesUsedToday
+    AdminPayment:
+      type: object
+      properties:
+        id:
+          type: integer
+        userId:
+          type: integer
+        plan:
+          type: string
+        transactionId:
+          type: string
+        screenshotName:
+          type: string
+          nullable: true
+        status:
+          type: string
+        createdAt:
+          type: string
+      required:
+        - id
+        - userId
+        - plan
+        - transactionId
+        - screenshotName
         - status
-
+        - createdAt
+    UpgradeUserBody:
+      type: object
+      properties:
+        plan:
+          type: string
+          enum: [week, month]
+      required: [plan]

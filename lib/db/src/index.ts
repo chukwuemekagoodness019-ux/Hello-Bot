@@ -4,13 +4,11 @@ import * as schema from "./schema";
 
 const { Pool } = pg;
 
-if (!process.env.DATABASE_URL) {
-  throw new Error(
-    "DATABASE_URL must be set. Did you forget to provision a database?",
-  );
-}
+export const pool = process.env.DATABASE_URL
+  ? new Pool({ connectionString: process.env.DATABASE_URL })
+  : null;
 
-export const pool = new Pool({ connectionString: process.env.DATABASE_URL });
-export const db = drizzle(pool, { schema });
+// db is null when DATABASE_URL is not set (e.g. when using Supabase JS client instead)
+export const db = pool ? drizzle(pool, { schema }) : (null as unknown as ReturnType<typeof drizzle>);
 
 export * from "./schema";

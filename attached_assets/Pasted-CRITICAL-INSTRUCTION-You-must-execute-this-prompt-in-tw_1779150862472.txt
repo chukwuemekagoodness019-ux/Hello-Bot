@@ -1,0 +1,84 @@
+CRITICAL INSTRUCTION: You must execute this prompt in two strictly sequential phases. Do NOT run these phases in parallel. You must completely finish Phase 1, verify its stability, and explicitly output confirmation before touching a single file in Phase 2. 
+
+Execution Priority throughout this entire run: Stability > Preservation > Repair > Optimization.
+
+==================================================
+PHASE 1: EXACT PROJECT RESTORATION (NON-DESTRUCTIVE)
+==================================================
+I have backed up my entire pnpm workspace project as a zip file on Google Drive. 
+Google Drive Link: [PASTE YOUR GOOGLE DRIVE LINK HERE]
+
+1. Use the shell/terminal (via wget, curl, or a python script) to securely download this zip file directly into the root of this Replit workspace. If necessary, extract the unique file ID from the URL to hit the direct download endpoint.
+2. Unzip and extract the contents directly into the root directory of this workspace.
+3. STRICT RESTORATION RULES:
+   - Maintain the exact folder and file structure from the zip (you should see an 'artifacts' folder containing 'API Server', 'Study system', etc.). 
+   - Do NOT overwrite working files unnecessarily. Do NOT modify any code yet. Do NOT create nested duplicate folders. 
+   - Delete the downloaded zip file immediately after successful extraction to save workspace storage.
+4. Read the root package.json and run the necessary install commands (e.g., pnpm install) to ensure all workspace dependencies are perfectly mapped.
+5. STOP COMMAND: Once dependencies are fully installed and the codebase structure is perfectly mirrored, stop and output this exact message: "Phase 1 Complete. Codebase safely restored. Standing by for Phase 2 authentication audit."
+
+==================================================
+PHASE 2: SURGICAL AUTH & DATABASE RECOVERY
+==================================================
+My app currently encounters a critical database/auth handshake failure during account creation and login, throwing these exact errors:
+* Failed query: select "id" from "users" where "users"."email" = $1 limit $2
+* Failed query: select "id", "email", "password_hash", "display_name", "created_at", "last_active_at", "is_premium", "messages_used_today", "quizzes_used_today", "voice_used_today"... from "users"...
+
+The environment secrets (VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY) are already populated in the Replit Secrets panel. Do NOT use local Postgres. You must route queries to Supabase safely using the following strict safety protocols:
+
+1. ARCHITECTURE PRESERVATION & ANTI-BREAKAGE INSTRUCTIONS:
+   - Do NOT rebuild the application from scratch. Do NOT replace working architecture unnecessarily. 
+   - Do NOT create duplicate auth systems, duplicate database clients, or introduce parallel state systems.
+   - Audit the existing PostgreSQL/Express database layer carefully. Remove ONLY obsolete or conflicting local database initialization logic that explicitly prevents Supabase connectivity. 
+   - Crucial: Preserve all existing Express routes, middleware, validation logic, API controllers, and service architecture. Patch minimally and incrementally.
+
+2. SCHEMA VERIFICATION & ALIGNMENT:
+   - Before modifying any backend queries, inspect the actual Supabase schema structure. Verify column existence, naming consistency (camelCase vs snake_case), data types, constraints, and RLS (Row Level Security) relationships.
+   - If mismatches exist between what the frontend expects and what the database has, generate migration-safe fixes or matching query adjustments rather than forcing destructive rewrites.
+
+3. AUTHENTICATION LIFE-CYCLE SYNCHRONIZATION:
+   - Verify whether the project uses Supabase Auth directly on the frontend OR a custom Express auth middleware layered on top of Supabase on the backend. Do not mix both systems incorrectly.
+   - Audit and verify the authentication lifecycle completely: Signup, Login, Session Persistence (sessionStorage/localStorage check), Token Refresh, Protected Routes, Logout, Auth State Hydration, and Profile Fetch Synchronization.
+   - Ensure frontend auth state and backend auth state remain perfectly synchronized after a browser page refresh to prevent race conditions.
+
+4. FAIL-SAFE & DATA SECURITY RULES:
+   - SECRET EXPOSURE BAN: Never print, expose, log, hardcode, or serialize environment secret values into frontend code, logs, git commits, console outputs, or API responses.
+   - FALLBACK FAILURE RULE: If a Supabase connection handshake fails during testing, isolate the exact failing layer safely, preserve app boot stability, avoid cascading rewrites, and do NOT delete unrelated working components.
+
+5. VERIFICATION, BUILD & TYPE-SAFETY VALIDATION:
+   Execute changes incrementally. After making a minor logical modification, run a verification step before moving to the next. The final state is only complete when you have verified:
+   - Perfect TypeScript compilation across the entire workspace (zero TS errors).
+   - Clean production frontend build execution.
+   - Successful backend API server boot and clean route registration.
+   - Active, tested Supabase connectivity with zero unresolved imports or duplicate event listeners.
+
+==================================================
+FINAL STABILITY ENFORCEMENT
+
+Before modifying any authentication, database, or API layer:
+
+- create a lightweight backup snapshot/checkpoint of the current restored workspace state
+- map all existing auth flows and database entry points first
+- identify every file importing database clients before modifying connections
+
+During repair:
+
+- patch incrementally
+- verify stability after each modification
+- avoid mass rewrites
+- avoid replacing working middleware
+- avoid changing frontend state architecture unless explicitly broken
+
+If conflicting auth implementations are detected:
+
+- identify the primary active system
+- remove only obsolete or unused implementations
+- preserve active session handling logic
+
+If uncertain whether a component is actively used:
+
+- trace imports/usages first before deletion
+
+The objective is:
+restore and stabilize,
+NOT redesign or over-engineer.
