@@ -132,7 +132,7 @@ export default function QuizPage() {
 
   if (!flags.quiz) {
     return (
-      <div className="min-h-[100dvh] bg-background text-foreground flex flex-col pb-14 md:pb-0">
+      <div className="min-h-[100dvh] bg-slate-950 text-slate-100 flex flex-col pb-14 md:pb-0">
         <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
           <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
@@ -165,7 +165,7 @@ export default function QuizPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col pb-14 md:pb-0">
+    <div className="min-h-[100dvh] bg-slate-950 text-slate-100 flex flex-col pb-14 md:pb-0">
       <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
         <button
           className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors"
@@ -190,10 +190,10 @@ export default function QuizPage() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div>
               <h1 className="text-2xl font-bold mb-1">Practice Quiz</h1>
-              <p className="text-muted-foreground text-sm">Set up a quick quiz to test your knowledge.</p>
+              <p className="text-slate-400 text-sm">Set up a quick quiz to test your knowledge.</p>
             </div>
 
-            <form onSubmit={handleGenerate} className="space-y-4 p-6 bg-card rounded-xl border border-border shadow-sm">
+            <form onSubmit={handleGenerate} className="space-y-4 p-6 glass rounded-xl border border-white/10 shadow-sm">
               <div className="space-y-2">
                 <Label>Subject / Topic</Label>
                 <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Cell Biology, WAEC Math, Macroeconomics" required className="h-11" />
@@ -247,7 +247,7 @@ export default function QuizPage() {
               </Button>
             </form>
 
-            <button className="w-full text-sm text-muted-foreground hover:text-foreground flex items-center justify-center gap-2 py-2 transition-colors" onClick={() => setLocation("/exam", { replace: true })}>
+            <button className="w-full text-sm text-slate-400 hover:text-slate-100 flex items-center justify-center gap-2 py-2 transition-colors" onClick={() => setLocation("/exam", { replace: true })}>
               <FileText className="w-4 h-4" />Want a full exam instead?
             </button>
           </div>
@@ -255,16 +255,16 @@ export default function QuizPage() {
 
         {state === "running" && activeQuiz && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
-            <div className="flex justify-between items-center bg-card p-4 rounded-xl border border-border shadow-sm">
+            <div className="flex justify-between items-center glass p-4 rounded-xl border border-white/10 shadow-sm">
               <div>
-                <span className="text-sm font-medium text-muted-foreground block">
+                <span className="text-sm font-medium text-slate-400 block">
                   Question {currentQuestionIdx + 1} of {activeQuiz.questions.length}
                 </span>
                 <div className="flex gap-1 mt-2 flex-wrap">
                   {activeQuiz.questions.map((_: unknown, i: number) => (
                     <button
                       key={i}
-                      className={`h-1.5 rounded-full transition-all ${i === currentQuestionIdx ? "bg-primary w-6" : i < currentQuestionIdx ? "bg-primary/40 w-4" : "bg-muted w-4"}`}
+                      className={`h-1.5 rounded-full transition-all ${i === currentQuestionIdx ? "bg-primary w-6" : i < currentQuestionIdx ? "bg-primary/40 w-4" : "bg-white/10 w-4"}`}
                       onClick={() => setCurrentQuestionIdx(i)}
                     />
                   ))}
@@ -275,7 +275,7 @@ export default function QuizPage() {
               </div>
             </div>
 
-            <div className="p-6 bg-card rounded-xl border border-border shadow-sm min-h-[280px] flex flex-col">
+            <div className="p-6 glass rounded-xl border border-white/10 shadow-sm min-h-[280px] flex flex-col">
               <h3 className="text-lg font-medium mb-6 leading-relaxed">
                 {activeQuiz.questions[currentQuestionIdx]?.prompt}
               </h3>
@@ -286,10 +286,10 @@ export default function QuizPage() {
                     {activeQuiz.questions[currentQuestionIdx].options!.map((opt: string, i: number) => (
                       <button
                         key={i}
-                        className={`w-full text-left p-4 rounded-xl border transition-all text-sm ${answers[activeQuiz.questions[currentQuestionIdx].id] === opt ? "bg-primary/10 border-primary font-medium ring-1 ring-primary/30" : "bg-background border-border hover:border-primary/40 hover:bg-accent/50"}`}
+                        className={`w-full text-left p-4 rounded-xl border transition-all text-sm ${answers[activeQuiz.questions[currentQuestionIdx].id] === opt ? "bg-primary/10 border-primary font-medium ring-1 ring-primary/30" : "bg-slate-950 border-white/10 hover:border-primary/40 hover:bg-white/5"}`}
                         onClick={() => { const id = activeQuiz.questions[currentQuestionIdx].id; const next = { ...answersRef.current, [id]: opt }; answersRef.current = next; setAnswers(next); }}
                       >
-                        <span className="text-muted-foreground font-mono mr-2 text-xs">{String.fromCharCode(65 + i)}.</span>{opt}
+                        <span className="text-slate-400 font-mono mr-2 text-xs">{String.fromCharCode(65 + i)}.</span>{opt}
                       </button>
                     ))}
                   </div>
@@ -319,14 +319,14 @@ export default function QuizPage() {
 
         {state === "results" && quizResult && (
           <div className="space-y-6 animate-in zoom-in-95 duration-500">
-            <div className="text-center space-y-2 mb-8 bg-card border border-border p-8 rounded-2xl shadow-sm">
+            <div className="text-center space-y-2 mb-8 glass border border-white/10 p-8 rounded-2xl shadow-sm">
               <h2 className="text-2xl font-bold">Quiz Complete</h2>
               <div className={`text-6xl font-black my-4 ${quizResult.percent >= 50 ? "text-primary" : "text-destructive"}`}>
                 {Math.round(quizResult.percent)}%
               </div>
-              <p className="text-muted-foreground">{quizResult.score} out of {quizResult.total} correct</p>
+              <p className="text-slate-400">{quizResult.score} out of {quizResult.total} correct</p>
               {quizResult.percent < 50 && (
-                <p className="text-sm text-muted-foreground italic mt-2">Don't give up! Review the explanations below and try again. 💪</p>
+                <p className="text-sm text-slate-400 italic mt-2">Don't give up! Review the explanations below and try again. 💪</p>
               )}
               {quizResult.percent >= 80 && (
                 <p className="text-sm text-primary font-medium mt-2">Outstanding performance! Keep it up! 🎉</p>
@@ -342,17 +342,17 @@ export default function QuizPage() {
                   </div>
                   <div className="pl-8 space-y-3 text-sm">
                     <div>
-                      <span className="text-muted-foreground block mb-0.5 text-xs uppercase tracking-wide">Your Answer</span>
+                      <span className="text-slate-400 block mb-0.5 text-xs uppercase tracking-wide">Your Answer</span>
                       <p className={res.isCorrect ? "text-primary font-medium" : "text-destructive font-medium"}>{res.userAnswer || "No answer provided"}</p>
                     </div>
                     {!res.isCorrect && (
                       <div>
-                        <span className="text-muted-foreground block mb-0.5 text-xs uppercase tracking-wide">Correct Answer</span>
+                        <span className="text-slate-400 block mb-0.5 text-xs uppercase tracking-wide">Correct Answer</span>
                         <p className="text-primary font-medium">{res.correctAnswer}</p>
                       </div>
                     )}
-                    <div className="bg-background/60 p-3 rounded-lg border border-border mt-2">
-                      <span className="text-muted-foreground block mb-1 text-xs uppercase tracking-wider font-semibold">Explanation</span>
+                    <div className="bg-slate-950/60 p-3 rounded-lg border border-white/10 mt-2">
+                      <span className="text-slate-400 block mb-1 text-xs uppercase tracking-wider font-semibold">Explanation</span>
                       <p>{res.explanation}</p>
                     </div>
                   </div>

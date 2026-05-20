@@ -209,8 +209,6 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
 
   const canSend = !disabled && (!!pendingFile || !!input.trim());
 
-  const hasSeparatorBeforeVoice = flags.image_upload || flags.pdf_upload;
-  const hasSeparatorBeforeFeedback = flags.image_upload || flags.pdf_upload || flags.voice;
 
   return (
     <div className="max-w-3xl mx-auto relative">
@@ -306,21 +304,7 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
               </button>
             </>
           )}
-          {flags.voice && (
-            <>
-              {hasSeparatorBeforeVoice && <div className="h-px bg-white/8 mx-3" />}
-              <button
-                className={`w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/8 transition-colors text-left ${isListening ? "text-red-400" : "text-slate-200"}`}
-                onClick={handleVoiceToggle}
-              >
-                {isListening
-                  ? <MicOff className="w-4 h-4 shrink-0" />
-                  : <Mic className="w-4 h-4 text-blue-400 shrink-0" />}
-                <span>{isListening ? "Stop Listening" : "Voice Input"}</span>
-              </button>
-            </>
-          )}
-          {hasSeparatorBeforeFeedback && <div className="h-px bg-white/8 mx-3" />}
+          <div className="h-px bg-white/8 mx-3" />
           <button
             className="w-full flex items-center gap-3 px-4 py-3 text-sm hover:bg-white/8 transition-colors text-left text-slate-200"
             onClick={() => { setMenuOpen(false); setFeedbackOpen(true); }}
@@ -378,7 +362,7 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
             value={input}
             onChange={(e) => setInput(e.target.value)}
             onKeyDown={handleKeyDown}
-            placeholder={pendingFile ? "Add an instruction (optional)… (Ctrl+Enter to send)" : "Ask a question… (Ctrl+Enter to send)"}
+            placeholder={pendingFile ? "Add an instruction (optional)…" : "Ask anything…"}
             className="min-h-[44px] max-h-32 bg-transparent border-0 focus-visible:ring-0 resize-none p-2.5 shadow-none text-base text-slate-100 placeholder:text-slate-500"
             rows={1}
             disabled={disabled}

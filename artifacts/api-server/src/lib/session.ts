@@ -40,25 +40,6 @@ function todayStr(): string {
   return new Date().toISOString().slice(0, 10);
 }
 
-async function resetIfNewDay(user: User): Promise<User> {
-  const today = todayStr();
-  if (user.lastResetDate !== today) {
-    return updateUser(user.id, {
-      messagesUsedToday: 0,
-      quizzesUsedToday: 0,
-      voiceUsedToday: 0,
-      lastResetDate: today,
-    });
-  }
-  return user;
-}
-
-async function downgradeIfExpired(user: User): Promise<User> {
-  if (user.isPremium && user.premiumUntil && new Date(user.premiumUntil).getTime() <= Date.now()) {
-    return updateUser(user.id, { isPremium: false });
-  }
-  return user;
-}
 
 export function setSessionCookie(res: Response, userId: string | number): void {
   res.cookie(COOKIE_NAME, sign(String(userId)), {
@@ -93,8 +74,17 @@ export async function sessionMiddleware(req: Request, res: Response, next: NextF
       return;
     }
 
-    user = await downgradeIfExpired(user);
-    user = await resetIfNewDay(user);
+    // Merge both checks into a single DB write when both conditions apply
+    const today = todayStr();
+    const needsDowngrade = user.isPremium && user.premiumUntil && new Date(user.premiumUntil).getTime() <= Date.now();
+    const needsReset = user.lastResetDate !== today;
+    if (needsDowngrade && needsReset) {
+      user = await updateUser(user.id, { isPremium: false, messagesUsedToday: 0, quizzesUsedToday: 0, voiceUsedToday: 0, lastResetDate: today });
+    } else if (needsDowngrade) {
+      user = await updateUser(user.id, { isPremium: false });
+    } else if (needsReset) {
+      user = await updateUser(user.id, { messagesUsedToday: 0, quizzesUsedToday: 0, voiceUsedToday: 0, lastResetDate: today });
+    }
     req.user = user;
     next();
   } catch (err) {

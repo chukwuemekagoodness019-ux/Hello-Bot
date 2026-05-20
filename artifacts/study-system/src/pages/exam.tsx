@@ -394,10 +394,10 @@ export default function ExamPage() {
 
   const BottomNav = () => (
     <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden h-14">
-      <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setLocation("/", { replace: true })}>
+      <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
         <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
       </button>
-      <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setLocation("/quiz", { replace: true })}>
+      <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/quiz", { replace: true })}>
         <GraduationCap className="w-5 h-5" /><span className="text-[10px] font-medium">Quiz</span>
       </button>
       <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-primary">
@@ -408,21 +408,21 @@ export default function ExamPage() {
 
   if (autoJoining) {
     return (
-      <div className="min-h-[100dvh] bg-background text-foreground flex flex-col items-center justify-center gap-4">
+      <div className="min-h-[100dvh] bg-slate-950 text-slate-100 flex flex-col items-center justify-center gap-4">
         <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center">
           <FileText className="w-7 h-7 text-primary animate-pulse" />
         </div>
         <p className="text-base font-medium">Loading exam…</p>
-        <p className="text-sm text-muted-foreground">Please wait</p>
+        <p className="text-sm text-slate-400">Please wait</p>
       </div>
     );
   }
 
   if (!flags.exam) {
     return (
-      <div className="min-h-[100dvh] bg-background text-foreground flex flex-col pb-14 md:pb-0">
+      <div className="min-h-[100dvh] bg-slate-950 text-slate-100 flex flex-col pb-14 md:pb-0">
         <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
-          <button className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setLocation("/", { replace: true })}>
+          <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
           </button>
           <div className="flex items-center gap-2">
@@ -432,11 +432,11 @@ export default function ExamPage() {
           <div className="w-20" />
         </header>
         <main className="flex-1 flex flex-col items-center justify-center p-6 text-center max-w-sm mx-auto">
-          <div className="w-14 h-14 bg-muted rounded-2xl flex items-center justify-center mb-4">
-            <FileText className="w-7 h-7 text-muted-foreground" />
+          <div className="w-14 h-14 bg-white/10 rounded-2xl flex items-center justify-center mb-4">
+            <FileText className="w-7 h-7 text-slate-400" />
           </div>
           <h2 className="text-xl font-bold mb-2">Exam Unavailable</h2>
-          <p className="text-muted-foreground text-sm">This feature is temporarily unavailable. Please check back later.</p>
+          <p className="text-slate-400 text-sm">This feature is temporarily unavailable. Please check back later.</p>
         </main>
         <BottomNav />
       </div>
@@ -445,9 +445,9 @@ export default function ExamPage() {
 
   if (userLoaded && !isPremium && state === "form" && !autoJoining) {
     return (
-      <div className="min-h-[100dvh] bg-background text-foreground flex flex-col pb-14 md:pb-0">
+      <div className="min-h-[100dvh] bg-slate-950 text-slate-100 flex flex-col pb-14 md:pb-0">
         <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
-          <button className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors" onClick={() => setLocation("/", { replace: true })}>
+          <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
           </button>
           <div className="flex items-center gap-2">
@@ -462,12 +462,12 @@ export default function ExamPage() {
             <Lock className="w-8 h-8 text-primary" />
           </div>
           <h2 className="text-2xl font-bold mb-2">Premium Feature</h2>
-          <p className="text-muted-foreground text-sm mb-6">
+          <p className="text-slate-400 text-sm mb-6">
             Exam Mode is available for Premium users. Upgrade to unlock timed exams, full score breakdowns, and anti-cheat protection.
           </p>
           <div className="w-full p-4 bg-primary/5 border border-primary/20 rounded-xl mb-6 text-sm space-y-2 text-left">
             <p className="font-semibold text-primary mb-2">Premium includes:</p>
-            <ul className="text-muted-foreground space-y-1 list-disc list-inside">
+            <ul className="text-slate-400 space-y-1 list-disc list-inside">
               <li>Unlimited messages &amp; quizzes</li>
               <li>Full Exam Mode access</li>
               <li>Extended voice input</li>
@@ -476,9 +476,9 @@ export default function ExamPage() {
           <Button className="w-full h-12 text-base" onClick={() => paymentModal.open()}>
             Upgrade to Premium
           </Button>
-          <div className="mt-6 p-4 bg-card border border-border rounded-xl w-full text-left space-y-3">
+          <div className="mt-6 p-4 glass border border-white/10 rounded-xl w-full text-left space-y-3">
             <p className="text-sm font-semibold">Have an exam link or code?</p>
-            <p className="text-xs text-muted-foreground">Join a shared exam without a Premium account.</p>
+            <p className="text-xs text-slate-400">Join a shared exam without a Premium account.</p>
             <div className="space-y-2">
               <Input placeholder="Exam code" value={joinCode} onChange={(e) => setJoinCode(e.target.value)} className="h-10 text-sm" />
               <Button
@@ -491,7 +491,7 @@ export default function ExamPage() {
               </Button>
             </div>
           </div>
-          <button className="mt-4 text-sm text-muted-foreground hover:text-foreground transition-colors" onClick={() => setLocation("/quiz", { replace: true })}>
+          <button className="mt-4 text-sm text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/quiz", { replace: true })}>
             Try Practice Quiz instead →
           </button>
         </main>
@@ -503,10 +503,10 @@ export default function ExamPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-background text-foreground flex flex-col pb-14 md:pb-0">
+    <div className="min-h-[100dvh] bg-slate-950 text-slate-100 flex flex-col pb-14 md:pb-0">
       <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
         <button
-          className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+          className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors"
           onClick={() => setLocation("/", { replace: true })}
         >
           <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
@@ -529,12 +529,12 @@ export default function ExamPage() {
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div>
               <h1 className="text-2xl font-bold mb-1 flex items-center gap-2"><span>📋</span> Exam Mode</h1>
-              <p className="text-muted-foreground text-sm">A timed exam with one-shot submission. Results are saved to your history.</p>
+              <p className="text-slate-400 text-sm">A timed exam with one-shot submission. Results are saved to your history.</p>
             </div>
 
             <div className="p-4 bg-primary/5 border border-primary/20 rounded-xl text-sm space-y-1">
               <p className="font-semibold text-primary mb-2">How it works</p>
-              <ul className="text-muted-foreground space-y-1 list-disc list-inside">
+              <ul className="text-slate-400 space-y-1 list-disc list-inside">
                 <li>All questions load at once — scroll through them</li>
                 <li>Answer as many as you can before time runs out</li>
                 <li>Only one submission allowed</li>
@@ -543,15 +543,15 @@ export default function ExamPage() {
               </ul>
             </div>
 
-            <div className="flex rounded-xl border border-border overflow-hidden">
+            <div className="flex rounded-xl border border-white/10 overflow-hidden">
               <button
-                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${!joinMode ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"}`}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${!joinMode ? "bg-primary text-primary-foreground" : "bg-slate-950 text-slate-400 hover:text-slate-100"}`}
                 onClick={() => setJoinMode(false)}
               >
                 Create Exam
               </button>
               <button
-                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${joinMode ? "bg-primary text-primary-foreground" : "bg-background text-muted-foreground hover:text-foreground"}`}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${joinMode ? "bg-primary text-primary-foreground" : "bg-slate-950 text-slate-400 hover:text-slate-100"}`}
                 onClick={() => setJoinMode(true)}
               >
                 Join Exam
@@ -559,10 +559,10 @@ export default function ExamPage() {
             </div>
 
             {joinMode ? (
-              <div className="p-6 bg-card rounded-xl border border-border shadow-sm space-y-4">
+              <div className="p-6 glass rounded-xl border border-white/10 shadow-sm space-y-4">
                 <div className="space-y-1">
                   <h2 className="font-semibold">Join a Shared Exam</h2>
-                  <p className="text-sm text-muted-foreground">Enter the exam code provided by the exam creator.</p>
+                  <p className="text-sm text-slate-400">Enter the exam code provided by the exam creator.</p>
                 </div>
                 <div className="space-y-2">
                   <Label>Exam Code</Label>
@@ -575,12 +575,12 @@ export default function ExamPage() {
                 >
                   {isJoining ? "Joining Exam…" : "Join Exam"}
                 </Button>
-                <p className="text-xs text-muted-foreground text-center">
+                <p className="text-xs text-slate-400 text-center">
                   Or paste the full share link in your browser — it will load automatically.
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleGenerate} className="space-y-4 p-6 bg-card rounded-xl border border-border shadow-sm">
+              <form onSubmit={handleGenerate} className="space-y-4 p-6 glass rounded-xl border border-white/10 shadow-sm">
                 <div className="space-y-2">
                   <Label>Subject / Topic</Label>
                   <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. WAEC Biology, JAMB Chemistry, A-Level Math" required className="h-11" />
@@ -686,7 +686,7 @@ export default function ExamPage() {
               </form>
             )}
 
-            <button className="w-full text-sm text-muted-foreground hover:text-foreground flex items-center justify-center gap-2 py-2 transition-colors" onClick={() => setLocation("/quiz", { replace: true })}>
+            <button className="w-full text-sm text-slate-400 hover:text-slate-100 flex items-center justify-center gap-2 py-2 transition-colors" onClick={() => setLocation("/quiz", { replace: true })}>
               <GraduationCap className="w-4 h-4" />Want a shorter practice quiz instead?
             </button>
           </div>
@@ -694,13 +694,13 @@ export default function ExamPage() {
 
         {state === "share" && activeQuiz && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="text-center space-y-2 p-8 bg-card border border-border rounded-2xl shadow-sm">
+            <div className="text-center space-y-2 p-8 glass border border-white/10 rounded-2xl shadow-sm">
               <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Share2 className="w-8 h-8 text-primary" />
               </div>
               <h2 className="text-2xl font-bold">Exam Ready!</h2>
-              <p className="text-muted-foreground text-sm">{activeQuiz.subject}</p>
-              <div className="flex items-center justify-center gap-4 mt-3 text-sm text-muted-foreground">
+              <p className="text-slate-400 text-sm">{activeQuiz.subject}</p>
+              <div className="flex items-center justify-center gap-4 mt-3 text-sm text-slate-400">
                 <span>{activeQuiz.questions.length} questions</span>
                 <span>·</span>
                 <span>{activeQuiz.difficulty}</span>
@@ -713,18 +713,18 @@ export default function ExamPage() {
               </div>
             </div>
 
-            <div className="p-5 bg-card border border-border rounded-xl shadow-sm space-y-4">
+            <div className="p-5 glass border border-white/10 rounded-xl shadow-sm space-y-4">
               <div className="flex items-center gap-2 mb-1">
                 <Link2 className="w-4 h-4 text-primary" />
                 <h3 className="font-semibold text-sm">Share this Exam</h3>
               </div>
-              <p className="text-xs text-muted-foreground">Others can join your exam using the code below, or by opening the share link.</p>
+              <p className="text-xs text-slate-400">Others can join your exam using the code below, or by opening the share link.</p>
 
               <div className="space-y-3">
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-muted-foreground">Exam Code</Label>
+                  <Label className="text-xs text-slate-400">Exam Code</Label>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono text-primary truncate">
+                    <code className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-primary truncate">
                       {examShareCode}
                     </code>
                     <Button
@@ -740,9 +740,9 @@ export default function ExamPage() {
 
                 {examShareLink && (
                   <div className="space-y-1.5">
-                    <Label className="text-xs text-muted-foreground">Share Link</Label>
+                    <Label className="text-xs text-slate-400">Share Link</Label>
                     <div className="flex items-center gap-2">
-                      <code className="flex-1 bg-background border border-border rounded-lg px-3 py-2 text-xs font-mono truncate text-muted-foreground">
+                      <code className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono truncate text-slate-400">
                         {examShareLink}
                       </code>
                       <Button
@@ -758,7 +758,7 @@ export default function ExamPage() {
                 )}
               </div>
 
-              <p className="text-xs text-muted-foreground bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
+              <p className="text-xs text-slate-400 bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-3">
                 ⚠️ Keep the link private — anyone with it can take your exam. Share only with intended participants.
               </p>
             </div>
@@ -773,7 +773,7 @@ export default function ExamPage() {
               Start Exam →
             </Button>
             <button
-              className="w-full text-sm text-muted-foreground hover:text-foreground text-center py-2 transition-colors"
+              className="w-full text-sm text-slate-400 hover:text-slate-100 text-center py-2 transition-colors"
               onClick={() => { setState("form"); setActiveQuiz(null); }}
             >
               ← Back to settings
@@ -783,16 +783,16 @@ export default function ExamPage() {
 
         {state === "running" && activeQuiz && (
           <div className="space-y-4 animate-in fade-in duration-300">
-            <div className="flex justify-between items-center p-4 bg-card rounded-xl border border-border shadow-sm sticky top-16 z-20">
+            <div className="flex justify-between items-center p-4 glass rounded-xl border border-white/10 shadow-sm sticky top-16 z-20">
               <div>
                 <p className="text-sm font-medium">{activeQuiz.subject}</p>
-                <p className="text-xs text-muted-foreground mt-0.5">{answeredCount} of {totalQuestions} answered</p>
+                <p className="text-xs text-slate-400 mt-0.5">{answeredCount} of {totalQuestions} answered</p>
               </div>
               <div className="flex gap-2 items-center">
-                <div className="w-24 h-1.5 bg-muted rounded-full overflow-hidden">
+                <div className="w-24 h-1.5 bg-white/10 rounded-full overflow-hidden">
                   <div className="bg-primary h-full rounded-full transition-all duration-300" style={{ width: `${(answeredCount / Math.max(totalQuestions, 1)) * 100}%` }} />
                 </div>
-                <span className="text-xs text-muted-foreground tabular-nums">{Math.round((answeredCount / Math.max(totalQuestions, 1)) * 100)}%</span>
+                <span className="text-xs text-slate-400 tabular-nums">{Math.round((answeredCount / Math.max(totalQuestions, 1)) * 100)}%</span>
               </div>
             </div>
 
@@ -804,7 +804,7 @@ export default function ExamPage() {
 
             <div className="space-y-5">
               {activeQuiz.questions.map((q, i) => (
-                <div key={q.id} className="p-5 bg-card rounded-xl border border-border shadow-sm">
+                <div key={q.id} className="p-5 glass rounded-xl border border-white/10 shadow-sm">
                   <div className="flex gap-3 mb-4">
                     <span className="flex items-center justify-center w-7 h-7 bg-primary/10 text-primary text-sm font-bold rounded-full shrink-0 mt-0.5">{i + 1}</span>
                     <h3 className="text-base font-medium leading-relaxed">{q.prompt}</h3>
@@ -814,10 +814,10 @@ export default function ExamPage() {
                       {q.options.map((opt, oi) => (
                         <button
                           key={oi}
-                          className={`w-full text-left p-3 rounded-lg border text-sm transition-all ${answers[q.id] === opt ? "bg-primary/10 border-primary font-medium ring-1 ring-primary/30" : "bg-background border-border hover:border-primary/40 hover:bg-accent/50"}`}
+                          className={`w-full text-left p-3 rounded-lg border text-sm transition-all ${answers[q.id] === opt ? "bg-primary/10 border-primary font-medium ring-1 ring-primary/30" : "bg-slate-950 border-white/10 hover:border-primary/40 hover:bg-white/5"}`}
                           onClick={() => { const next = { ...answersRef.current, [q.id]: opt }; answersRef.current = next; setAnswers(next); }}
                         >
-                          <span className="text-muted-foreground font-mono mr-2 text-xs">{String.fromCharCode(65 + oi)}.</span>{opt}
+                          <span className="text-slate-400 font-mono mr-2 text-xs">{String.fromCharCode(65 + oi)}.</span>{opt}
                         </button>
                       ))}
                     </div>
@@ -834,22 +834,22 @@ export default function ExamPage() {
           <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4 text-center animate-in fade-in duration-300">
             <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center"><span className="text-3xl">⏳</span></div>
             <h2 className="text-xl font-bold">Marking your exam…</h2>
-            <p className="text-muted-foreground text-sm">Please wait while we process your results.</p>
+            <p className="text-slate-400 text-sm">Please wait while we process your results.</p>
           </div>
         )}
 
         {state === "results" && quizResult && (
           <div className="space-y-6 animate-in zoom-in-95 duration-500">
-            <div className="text-center space-y-2 p-8 bg-card border border-border rounded-2xl shadow-sm">
+            <div className="text-center space-y-2 p-8 glass border border-white/10 rounded-2xl shadow-sm">
               <div className="flex items-center justify-center gap-2 mb-3 text-primary">
                 <Trophy className="w-6 h-6" /><h2 className="text-2xl font-bold">Exam Complete</h2>
               </div>
               <div className={`text-7xl font-black my-4 ${quizResult.percent >= 50 ? "text-primary" : "text-destructive"}`}>
                 {Math.round(quizResult.percent)}%
               </div>
-              <p className="text-muted-foreground text-lg">{quizResult.score} correct out of {quizResult.total}</p>
+              <p className="text-slate-400 text-lg">{quizResult.score} correct out of {quizResult.total}</p>
               {quizResult.percent < 50 && (
-                <p className="text-sm text-muted-foreground mt-2 italic">Don't be discouraged — every attempt teaches you something. Review the explanations and try again! 💪</p>
+                <p className="text-sm text-slate-400 mt-2 italic">Don't be discouraged — every attempt teaches you something. Review the explanations and try again! 💪</p>
               )}
               {quizResult.percent >= 80 && (
                 <p className="text-sm text-primary font-medium mt-2">Excellent work! You're mastering this topic! 🎉</p>
@@ -871,17 +871,17 @@ export default function ExamPage() {
                     </div>
                     <div className="pl-8 space-y-2 text-sm">
                       <div>
-                        <span className="text-muted-foreground text-xs uppercase tracking-wide">Your Answer: </span>
+                        <span className="text-slate-400 text-xs uppercase tracking-wide">Your Answer: </span>
                         <span className={res.isCorrect ? "text-primary font-medium" : "text-destructive font-medium"}>{res.userAnswer || "No answer"}</span>
                       </div>
                       {!res.isCorrect && (
                         <div>
-                          <span className="text-muted-foreground text-xs uppercase tracking-wide">Correct Answer: </span>
+                          <span className="text-slate-400 text-xs uppercase tracking-wide">Correct Answer: </span>
                           <span className="text-primary font-medium">{res.correctAnswer}</span>
                         </div>
                       )}
-                      <div className="bg-background/60 p-3 rounded-lg border border-border">
-                        <span className="text-muted-foreground text-xs uppercase tracking-wider font-semibold block mb-1">Explanation</span>
+                      <div className="bg-slate-950/60 p-3 rounded-lg border border-white/10">
+                        <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold block mb-1">Explanation</span>
                         <p className="leading-relaxed">{res.explanation}</p>
                       </div>
                     </div>
@@ -900,7 +900,7 @@ export default function ExamPage() {
       {state === "running" && (
         <div className="fixed bottom-14 md:bottom-0 left-0 right-0 p-4 glass-subtle border-t border-white/8 z-30">
           <div className="max-w-2xl mx-auto flex gap-3 items-center">
-            <div className="flex-1 text-sm text-muted-foreground">
+            <div className="flex-1 text-sm text-slate-400">
               {answeredCount < totalQuestions
                 ? `${totalQuestions - answeredCount} question${totalQuestions - answeredCount !== 1 ? "s" : ""} remaining`
                 : "All questions answered ✓"}
@@ -913,13 +913,13 @@ export default function ExamPage() {
       )}
 
       {showSubmitConfirm && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4">
+        <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass border border-white/10 rounded-2xl p-6 max-w-sm w-full shadow-2xl text-center space-y-4">
             <div className="w-12 h-12 bg-primary/10 rounded-full flex items-center justify-center mx-auto">
               <FileText className="w-6 h-6 text-primary" />
             </div>
             <h3 className="text-xl font-bold">Submit Exam?</h3>
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-slate-400">
               {answeredCount < totalQuestions
                 ? `You have ${totalQuestions - answeredCount} unanswered question${totalQuestions - answeredCount !== 1 ? "s" : ""}. This cannot be undone.`
                 : "You've answered all questions. This cannot be undone."}
