@@ -1,6 +1,6 @@
 kind = "web"
 previewPath = "/companion/"
-title = "AI Study Companion"
+title = "AI Study Companion (archived)"
 version = "1.0.0"
 id = "artifacts/study-companion"
 router = "path"
@@ -16,15 +16,6 @@ localPort = 20734
 
 [services.development]
 run = "pnpm --filter @workspace/study-companion run dev"
-
-[services.production]
-build = [ "pnpm", "--filter", "@workspace/study-companion", "run", "build" ]
-publicDir = "artifacts/study-companion/dist/public"
-serve = "static"
-
-[[services.production.rewrites]]
-from = "/*"
-to = "/index.html"
 
 [services.env]
 PORT = "20734"
