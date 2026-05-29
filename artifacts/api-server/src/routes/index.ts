@@ -8,6 +8,7 @@ import quizRouter from "./quiz";
 import paymentRouter from "./payment";
 import adminRouter from "./admin";
 import controlRouter from "./control";
+import userMessagesRouter from "./user-messages";
 
 const router: IRouter = Router();
 
@@ -20,5 +21,6 @@ router.use(quizRouter);
 router.use(paymentRouter);
 router.use(adminRouter);
 router.use(controlRouter);
+router.use(userMessagesRouter);
 
 export default router;

@@ -2,12 +2,13 @@ import { Router, type IRouter } from "express";
 import { sessionMiddleware, isPremiumActive, LIMITS } from "../lib/session";
 import { updateUser } from "../lib/db-users";
 import { SendChatBody } from "@workspace/api-zod";
-import { chatComplete, chatCompleteStream, STREAM_FALLBACK } from "../lib/ai";
+import { chatComplete, chatCompleteStream, STREAM_FALLBACK, FALLBACK_MESSAGE } from "../lib/ai";
 
 const router: IRouter = Router();
 
 // ---------------------------------------------------------------------------
 // Standard (non-streaming) chat — kept for API clients and fallback.
+// BUG-01 FIX: Counter is NOT incremented when AI returns FALLBACK_MESSAGE.
 // ---------------------------------------------------------------------------
 router.post("/chat", sessionMiddleware, async (req, res, next) => {
   try {
@@ -40,10 +41,12 @@ router.post("/chat", sessionMiddleware, async (req, res, next) => {
 
     const reply = await chatComplete(messages);
 
-    await updateUser(u.id, {
-      messagesUsedToday: u.messagesUsedToday + 1,
-      voiceUsedToday: usedVoice ? u.voiceUsedToday + 1 : u.voiceUsedToday,
-    });
+    if (reply !== FALLBACK_MESSAGE) {
+      await updateUser(u.id, {
+        messagesUsedToday: u.messagesUsedToday + 1,
+        voiceUsedToday: usedVoice ? u.voiceUsedToday + 1 : u.voiceUsedToday,
+      });
+    }
 
     res.json({ reply, role: "assistant" });
   } catch (err) {
@@ -56,6 +59,7 @@ router.post("/chat", sessionMiddleware, async (req, res, next) => {
 // Each data event: { text: string }  — accumulate into full message.
 // Final event: [DONE]
 // Error before stream starts: normal HTTP error JSON.
+// BUG-01 FIX: Counter is NOT incremented when all providers fail (STREAM_FALLBACK).
 // ---------------------------------------------------------------------------
 router.post("/chat/stream", sessionMiddleware, async (req, res, next) => {
   try {
@@ -113,10 +117,13 @@ router.post("/chat/stream", sessionMiddleware, async (req, res, next) => {
     res.write("data: [DONE]\n\n");
     res.end();
 
-    await updateUser(u.id, {
-      messagesUsedToday: u.messagesUsedToday + 1,
-      voiceUsedToday: usedVoice ? u.voiceUsedToday + 1 : u.voiceUsedToday,
-    });
+    const aiSucceeded = fullReply !== STREAM_FALLBACK;
+    if (aiSucceeded) {
+      await updateUser(u.id, {
+        messagesUsedToday: u.messagesUsedToday + 1,
+        voiceUsedToday: usedVoice ? u.voiceUsedToday + 1 : u.voiceUsedToday,
+      });
+    }
   } catch (err) {
     if (!res.headersSent) {
       next(err);

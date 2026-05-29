@@ -5,13 +5,13 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Check, X, ArrowUp, Activity, RefreshCw, Users, CreditCard, Image,
   ToggleLeft, ToggleRight, Megaphone, MessageSquare, AlertTriangle, ShieldAlert,
-  FileText,
+  FileText, Send,
 } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL as string;
 
 type AdminUser = {
-  id: number;
+  id: number | string;
   email: string | null;
   displayName: string | null;
   isPremium: boolean;
@@ -25,18 +25,26 @@ type AdminUser = {
 
 type AdminPayment = {
   id: number;
-  userId: number;
+  userId: number | string;
   plan: string;
   transactionId: string;
   screenshotName: string | null;
   hasScreenshot: boolean;
   status: string;
   createdAt: string;
+  rejectionReason: string | null;
 };
 
 type ProviderStatus = "Active" | "Out of Credits" | "Unavailable" | "Not Configured";
 interface ProviderHealth { status: ProviderStatus; latency: number | null; role: string; }
-interface AiStatus { openrouter: ProviderHealth; openai: ProviderHealth; deepseek: ProviderHealth; checkedAt: string; }
+interface AiStatus {
+  openrouter: ProviderHealth;
+  openai: ProviderHealth;
+  deepseek: ProviderHealth;
+  gemini?: ProviderHealth;
+  cache?: { size: number; max: number };
+  checkedAt: string;
+}
 
 type FeedbackItem = { id: number; userId: number | null; category: string; message: string; status: string; createdAt: string; };
 type ErrorEntry = { ts: string; provider: string; stage: string; message: string; };
@@ -76,7 +84,8 @@ function StatusBadge({ status }: { status: string }) {
 export default function AdminPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
-  const [secretKey, setSecretKey] = useState(() => new URLSearchParams(window.location.search).get("key") || "");
+  // BUG-08 FIX: Do not read secret key from URL query param (leaks to logs/history).
+  const [secretKey, setSecretKey] = useState("");
   const { toast } = useToast();
   const [token, setToken] = useState<string | null>(null);
   const [loginPending, setLoginPending] = useState(false);
@@ -98,6 +107,14 @@ export default function AdminPage() {
   const [errorLog, setErrorLog] = useState<ErrorEntry[]>([]);
   const [activeExams, setActiveExams] = useState<ActiveExam[]>([]);
   const [confirmAction, setConfirmAction] = useState<ConfirmAction | null>(null);
+
+  // Phase 5: reject with reason dialog
+  const [rejectDialog, setRejectDialog] = useState<{ paymentId: number; reason: string } | null>(null);
+  const [rejectPending, setRejectPending] = useState(false);
+
+  // Phase 6: admin → user message dialog
+  const [messageDialog, setMessageDialog] = useState<{ userId: number | string; userName: string; text: string } | null>(null);
+  const [messagePending, setMessagePending] = useState(false);
 
   const adminHeaders = (t: string) => ({ "x-admin-token": t });
   const adminJsonHeaders = (t: string) => ({ "x-admin-token": t, "Content-Type": "application/json" });
@@ -206,30 +223,85 @@ export default function AdminPage() {
     }
   };
 
+  // Phase 5: opens reject dialog instead of immediately rejecting
   const handlePaymentAction = async (id: number, action: "approve" | "reject") => {
+    if (action === "reject") {
+      setRejectDialog({ paymentId: id, reason: "" });
+      return;
+    }
     try {
       const res = await fetch(`${BASE}api/admin/payments/${id}/${action}`, { method: "POST", headers: adminHeaders(token!) });
-      if (res.ok) { toast({ title: `Payment ${action}d` }); fetchDashboard(token!); }
+      if (res.ok) { toast({ title: "Payment approved" }); fetchDashboard(token!); }
     } catch {}
   };
 
-  const handleUpgrade = async (id: number) => {
+  const handleRejectConfirm = async () => {
+    if (!rejectDialog) return;
+    setRejectPending(true);
     try {
-      const res = await fetch(`${BASE}api/admin/users/${id}/upgrade`, { method: "POST", headers: adminJsonHeaders(token!), body: JSON.stringify({ plan: "monthly" }) });
+      const res = await fetch(`${BASE}api/admin/payments/${rejectDialog.paymentId}/reject`, {
+        method: "POST",
+        headers: adminJsonHeaders(token!),
+        body: JSON.stringify({ reason: rejectDialog.reason.trim() }),
+      });
+      if (res.ok) { toast({ title: "Payment rejected" }); fetchDashboard(token!); }
+    } catch {} finally {
+      setRejectPending(false);
+      setRejectDialog(null);
+    }
+  };
+
+  // BUG-03 FIX: id is now number | string
+  const handleUpgrade = async (id: number | string) => {
+    try {
+      const res = await fetch(`${BASE}api/admin/users/${String(id)}/upgrade`, {
+        method: "POST",
+        headers: adminJsonHeaders(token!),
+        body: JSON.stringify({ plan: "monthly" }),
+      });
       if (res.ok) { toast({ title: "User upgraded to Premium" }); fetchDashboard(token!); }
     } catch {}
   };
 
-  const handleRevoke = (id: number) => {
+  const handleRevoke = (id: number | string) => {
+    const label = users.find((u) => u.id === id)?.email || users.find((u) => u.id === id)?.displayName || `User #${id}`;
     setConfirmAction({
-      label: `Revoke Premium for User #${id}? Their access will end immediately.`,
+      label: `Revoke Premium for ${label}? Their access will end immediately.`,
       onConfirm: async () => {
         try {
-          const res = await fetch(`${BASE}api/admin/users/${id}/revoke`, { method: "POST", headers: adminHeaders(token!) });
+          const res = await fetch(`${BASE}api/admin/users/${String(id)}/revoke`, { method: "POST", headers: adminHeaders(token!) });
           if (res.ok) { toast({ title: "Premium revoked" }); fetchDashboard(token!); }
         } catch {}
       },
     });
+  };
+
+  // Phase 6: open message dialog
+  const handleOpenMessage = (id: number | string, displayName: string | null, email: string | null) => {
+    const userName = displayName || email || `User #${id}`;
+    setMessageDialog({ userId: id, userName, text: "" });
+  };
+
+  const handleSendMessage = async () => {
+    if (!messageDialog || !messageDialog.text.trim()) return;
+    setMessagePending(true);
+    try {
+      const res = await fetch(`${BASE}api/admin/users/${String(messageDialog.userId)}/message`, {
+        method: "POST",
+        headers: adminJsonHeaders(token!),
+        body: JSON.stringify({ text: messageDialog.text.trim(), fromAdmin: "Admin" }),
+      });
+      if (res.ok) {
+        toast({ title: `Message sent to ${messageDialog.userName}` });
+        setMessageDialog(null);
+      } else {
+        toast({ title: "Failed to send message", variant: "destructive" });
+      }
+    } catch {
+      toast({ title: "Network error", variant: "destructive" });
+    } finally {
+      setMessagePending(false);
+    }
   };
 
   const handleClearErrors = () => {
@@ -325,6 +397,9 @@ export default function AdminPage() {
       },
     });
   };
+
+  // Build user lookup map for payments section (show email/name instead of ID)
+  const userMap = new Map(users.map((u) => [String(u.id), u]));
 
   const filteredPayments = paymentFilter === "all" ? payments : payments.filter((p) => p.status === paymentFilter);
   const unreadFeedback = feedbackItems.filter((f) => f.status === "unread").length;
@@ -432,10 +507,11 @@ export default function AdminPage() {
                   Refresh
                 </Button>
               </div>
-              <div className="grid gap-3 sm:grid-cols-3">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {aiStatus ? (
-                  (["openrouter", "openai", "deepseek"] as const).map((key) => {
+                  (["openrouter", "openai", "deepseek", "gemini"] as const).map((key) => {
                     const p = aiStatus[key];
+                    if (!p) return null;
                     const color = p.status === "Active" ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
                       : p.status === "Out of Credits" ? "text-yellow-500 bg-yellow-500/10 border-yellow-500/20"
                       : p.status === "Not Configured" ? "text-muted-foreground bg-muted border-border"
@@ -452,12 +528,19 @@ export default function AdminPage() {
                     );
                   })
                 ) : (
-                  <div className="col-span-3 text-center text-muted-foreground text-sm py-4">
+                  <div className="col-span-4 text-center text-muted-foreground text-sm py-4">
                     {aiLoading ? "Checking providers…" : "Click Refresh to check status"}
                   </div>
                 )}
               </div>
-              {aiStatus && <p className="text-xs text-muted-foreground mt-3">Last checked: {new Date(aiStatus.checkedAt).toLocaleTimeString()}</p>}
+              {aiStatus && (
+                <div className="flex items-center justify-between mt-3">
+                  <p className="text-xs text-muted-foreground">Last checked: {new Date(aiStatus.checkedAt).toLocaleTimeString()}</p>
+                  {aiStatus.cache && (
+                    <p className="text-xs text-muted-foreground">Response cache: {aiStatus.cache.size}/{aiStatus.cache.max} entries</p>
+                  )}
+                </div>
+              )}
             </div>
           </>
         )}
@@ -465,7 +548,6 @@ export default function AdminPage() {
         {/* ── CONTROL ───────────────────────────────────────────────── */}
         {activeSection === "control" && (
           <>
-            {/* Feature flags */}
             <div className="p-5 bg-card rounded-xl border border-border shadow-sm">
               <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
                 <ToggleRight className="w-5 h-5 text-primary" />Feature Flags
@@ -494,7 +576,6 @@ export default function AdminPage() {
               </div>
             </div>
 
-            {/* Announcement */}
             <div className="p-5 bg-card rounded-xl border border-border shadow-sm">
               <h2 className="text-lg font-semibold flex items-center gap-2 mb-4">
                 <Megaphone className="w-5 h-5 text-primary" />Global Announcement
@@ -579,36 +660,50 @@ export default function AdminPage() {
               </div>
             ) : (
               <div className="space-y-3">
-                {filteredPayments.map((pay) => (
-                  <div key={pay.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-background rounded-lg border border-border">
-                    <div className="space-y-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-medium text-sm">User #{pay.userId}</span>
-                        <StatusBadge status={pay.status} />
-                        <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full capitalize">{pay.plan}</span>
+                {filteredPayments.map((pay) => {
+                  const payUser = userMap.get(String(pay.userId));
+                  const userLabel = payUser
+                    ? (payUser.displayName || payUser.email || `User #${pay.userId}`)
+                    : `User #${pay.userId}`;
+                  return (
+                    <div key={pay.id} className="flex flex-col sm:flex-row sm:items-start justify-between gap-3 p-4 bg-background rounded-lg border border-border">
+                      <div className="space-y-1 min-w-0 flex-1">
+                        <div className="flex items-center gap-2 flex-wrap">
+                          <span className="font-medium text-sm">{userLabel}</span>
+                          <StatusBadge status={pay.status} />
+                          <span className="text-xs text-muted-foreground bg-muted px-2 py-0.5 rounded-full capitalize">{pay.plan}</span>
+                        </div>
+                        {payUser?.email && payUser?.displayName && (
+                          <div className="text-xs text-muted-foreground">{payUser.email}</div>
+                        )}
+                        <div className="text-xs text-muted-foreground font-mono truncate">{pay.transactionId}</div>
+                        <div className="text-xs text-muted-foreground">{new Date(pay.createdAt).toLocaleString()}</div>
+                        {pay.status === "rejected" && pay.rejectionReason && (
+                          <div className="text-xs text-red-400 bg-red-500/8 border border-red-500/20 rounded px-2 py-1 mt-1">
+                            Reason: {pay.rejectionReason}
+                          </div>
+                        )}
                       </div>
-                      <div className="text-xs text-muted-foreground font-mono truncate">{pay.transactionId}</div>
-                      <div className="text-xs text-muted-foreground">{new Date(pay.createdAt).toLocaleString()}</div>
-                    </div>
-                    <div className="flex items-center gap-2 shrink-0">
-                      {pay.hasScreenshot && (
-                        <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => viewScreenshot(pay.id)}>
-                          <Image className="w-3.5 h-3.5" />Receipt
-                        </Button>
-                      )}
-                      {pay.status === "pending" && (
-                        <>
-                          <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10" onClick={() => handlePaymentAction(pay.id, "approve")}>
-                            <Check className="w-3.5 h-3.5" />Approve
+                      <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                        {pay.hasScreenshot && (
+                          <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => viewScreenshot(pay.id)}>
+                            <Image className="w-3.5 h-3.5" />Receipt
                           </Button>
-                          <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs text-red-600 border-red-500/30 hover:bg-red-500/10" onClick={() => handlePaymentAction(pay.id, "reject")}>
-                            <X className="w-3.5 h-3.5" />Reject
-                          </Button>
-                        </>
-                      )}
+                        )}
+                        {pay.status === "pending" && (
+                          <>
+                            <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs text-emerald-600 border-emerald-500/30 hover:bg-emerald-500/10" onClick={() => handlePaymentAction(pay.id, "approve")}>
+                              <Check className="w-3.5 h-3.5" />Approve
+                            </Button>
+                            <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs text-red-600 border-red-500/30 hover:bg-red-500/10" onClick={() => handlePaymentAction(pay.id, "reject")}>
+                              <X className="w-3.5 h-3.5" />Reject
+                            </Button>
+                          </>
+                        )}
+                      </div>
                     </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
@@ -622,7 +717,7 @@ export default function AdminPage() {
             </h2>
             <div className="space-y-3">
               {users.map((u) => (
-                <div key={u.id} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-background rounded-lg border border-border">
+                <div key={String(u.id)} className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-background rounded-lg border border-border">
                   <div className="space-y-1">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-medium text-sm">{u.displayName || u.email || `User #${u.id}`}</span>
@@ -646,7 +741,16 @@ export default function AdminPage() {
                       <div className="text-xs text-muted-foreground">Premium until: {new Date(u.premiumUntil).toLocaleDateString()}</div>
                     )}
                   </div>
-                  <div className="flex items-center gap-2 shrink-0">
+                  <div className="flex items-center gap-2 shrink-0 flex-wrap">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1.5 text-xs"
+                      onClick={() => handleOpenMessage(u.id, u.displayName, u.email)}
+                      title="Send message to user"
+                    >
+                      <Send className="w-3.5 h-3.5" />Message
+                    </Button>
                     {!u.isPremium ? (
                       <Button size="sm" variant="outline" className="h-8 gap-1.5 text-xs" onClick={() => handleUpgrade(u.id)}>
                         <ArrowUp className="w-3.5 h-3.5" />Upgrade
@@ -809,6 +913,18 @@ export default function AdminPage() {
 
       </div>
 
+      {/* Screenshot modal */}
+      {screenshotUrl && (
+        <div className="fixed inset-0 bg-background/90 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setScreenshotUrl(null)}>
+          <div className="relative max-w-2xl w-full" onClick={(e) => e.stopPropagation()}>
+            <Button className="absolute -top-10 right-0" variant="outline" size="sm" onClick={() => setScreenshotUrl(null)}>
+              <X className="w-4 h-4 mr-1" />Close
+            </Button>
+            <img src={screenshotUrl} alt="Payment receipt" className="w-full rounded-xl border border-border shadow-2xl" />
+          </div>
+        </div>
+      )}
+
       {/* Confirmation modal */}
       {confirmAction && (
         <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setConfirmAction(null)}>
@@ -832,17 +948,66 @@ export default function AdminPage() {
         </div>
       )}
 
-      {/* Screenshot modal */}
-      {screenshotUrl && (
-        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => { URL.revokeObjectURL(screenshotUrl); setScreenshotUrl(null); }}>
-          <div className="relative max-w-lg w-full bg-card rounded-2xl border border-border shadow-2xl overflow-hidden">
-            <div className="flex items-center justify-between p-4 border-b border-border">
-              <span className="font-semibold">Payment Receipt</span>
-              <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => { URL.revokeObjectURL(screenshotUrl); setScreenshotUrl(null); }}>
-                <X className="w-4 h-4" />
+      {/* Phase 5: Reject with reason dialog */}
+      {rejectDialog && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setRejectDialog(null)}>
+          <div className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold">Reject Payment</h3>
+            <p className="text-sm text-muted-foreground">Provide a reason so the user understands why their payment was rejected.</p>
+            <textarea
+              value={rejectDialog.reason}
+              onChange={(e) => setRejectDialog((d) => d ? { ...d, reason: e.target.value } : d)}
+              placeholder="e.g. Screenshot unclear, wrong amount, transaction ID not found…"
+              rows={3}
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-destructive"
+              autoFocus
+            />
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1 h-11" onClick={() => setRejectDialog(null)}>Cancel</Button>
+              <Button
+                variant="destructive"
+                className="flex-1 h-11"
+                onClick={handleRejectConfirm}
+                disabled={rejectPending}
+              >
+                {rejectPending ? "Rejecting…" : "Reject Payment"}
               </Button>
             </div>
-            <img src={screenshotUrl} alt="Payment receipt" className="w-full max-h-[60vh] object-contain p-4" onClick={(e) => e.stopPropagation()} />
+          </div>
+        </div>
+      )}
+
+      {/* Phase 6: Send message to user dialog */}
+      {messageDialog && (
+        <div className="fixed inset-0 bg-background/80 backdrop-blur-sm z-50 flex items-center justify-center p-4" onClick={() => setMessageDialog(null)}>
+          <div className="bg-card border border-border rounded-2xl p-6 max-w-sm w-full shadow-2xl space-y-4" onClick={(e) => e.stopPropagation()}>
+            <h3 className="text-lg font-bold flex items-center gap-2">
+              <Send className="w-5 h-5 text-primary" />
+              Message {messageDialog.userName}
+            </h3>
+            <p className="text-xs text-muted-foreground">This message will appear the next time the user visits the app.</p>
+            <textarea
+              value={messageDialog.text}
+              onChange={(e) => setMessageDialog((d) => d ? { ...d, text: e.target.value } : d)}
+              placeholder="Type your message to this user…"
+              rows={4}
+              className="w-full bg-background border border-border rounded-lg px-3 py-2 text-sm resize-none focus:outline-none focus:ring-1 focus:ring-primary"
+              autoFocus
+              maxLength={1000}
+            />
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-muted-foreground">{messageDialog.text.length}/1000</span>
+            </div>
+            <div className="flex gap-3">
+              <Button variant="outline" className="flex-1 h-11" onClick={() => setMessageDialog(null)}>Cancel</Button>
+              <Button
+                className="flex-1 h-11"
+                onClick={handleSendMessage}
+                disabled={messagePending || !messageDialog.text.trim()}
+              >
+                {messagePending ? "Sending…" : "Send Message"}
+              </Button>
+            </div>
           </div>
         </div>
       )}

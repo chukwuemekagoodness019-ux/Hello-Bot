@@ -238,6 +238,39 @@ export async function updatePaymentStatus(id: number, status: string): Promise<P
   return toPayment(data as Record<string, unknown>);
 }
 
+export async function getPaymentsByTransactionId(transactionId: string): Promise<Payment[]> {
+  const { data, error } = await supabase
+    .from("payments")
+    .select("*")
+    .eq("transaction_id", transactionId)
+    .limit(5);
+  throwIfError(error, "getPaymentsByTransactionId");
+  return (data ?? []).map((r) => toPayment(r as Record<string, unknown>));
+}
+
+export async function getPendingPaymentsByUser(userId: string | number): Promise<Payment[]> {
+  const { data, error } = await supabase
+    .from("payments")
+    .select("*")
+    .eq("user_id", userId)
+    .eq("status", "pending")
+    .limit(5);
+  throwIfError(error, "getPendingPaymentsByUser");
+  return (data ?? []).map((r) => toPayment(r as Record<string, unknown>));
+}
+
+export async function getLatestPaymentByUser(userId: string | number): Promise<Payment | null> {
+  const { data, error } = await supabase
+    .from("payments")
+    .select("*")
+    .eq("user_id", userId)
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .maybeSingle();
+  throwIfError(error, "getLatestPaymentByUser");
+  return data ? toPayment(data as Record<string, unknown>) : null;
+}
+
 // ── Feedback ──────────────────────────────────────────────────────────────────
 
 export async function insertFeedback(values: {

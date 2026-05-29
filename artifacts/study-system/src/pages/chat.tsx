@@ -28,12 +28,18 @@ export default function ChatPage() {
   const [isPending, setIsPending] = useState(false);
   const [isStreaming, setIsStreaming] = useState(false);
   const [streamingContent, setStreamingContent] = useState<string>("");
+  // Phase 3 isolation fix: track which conversation owns the active stream
+  const [streamingConvId, setStreamingConvId] = useState<string | null>(null);
   const isStreamingRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
 
   // -------------------------------------------------------------------------
   // Core streaming fetch — calls /api/chat/stream, updates streamingContent.
   // Returns full assembled text on success or empty string on failure.
+  //
+  // Phase 3 FIX: streamingConvId is set at the start so the streaming bubble
+  // only appears in the conversation that originated the request, even if the
+  // user switches to a different conversation while waiting.
   // -------------------------------------------------------------------------
   const streamChat = useCallback(
     async (
@@ -47,6 +53,7 @@ export default function ChatPage() {
 
       setIsPending(true);
       setStreamingContent("");
+      setStreamingConvId(convId);
       isStreamingRef.current = false;
 
       let res: Response | null = null;
@@ -60,7 +67,10 @@ export default function ChatPage() {
           });
           break;
         } catch (fetchErr) {
-          if (fetchErr instanceof Error && fetchErr.name === "AbortError") throw fetchErr;
+          if (fetchErr instanceof Error && fetchErr.name === "AbortError") {
+            setStreamingConvId(null);
+            throw fetchErr;
+          }
           if (attempt < 2) {
             await new Promise((r) => setTimeout(r, 1000 * (attempt + 1)));
           } else {
@@ -75,6 +85,7 @@ export default function ChatPage() {
         if (res.status === 402) {
           const data = await res.json().catch(() => ({})) as Record<string, unknown>;
           setIsPending(false);
+          setStreamingConvId(null);
           paymentModal.open();
           setLocalError("Daily limit reached. Upgrade to Premium for unlimited access.");
           const kind = typeof data.kind === "string" ? data.kind : "messages";
@@ -84,11 +95,11 @@ export default function ChatPage() {
 
         if (!res.ok || !res.body) {
           setIsPending(false);
+          setStreamingConvId(null);
           setLocalError("Failed to send message. Please retry.");
           return;
         }
 
-        // Stream started — hide "thinking" dots, show live content
         setIsPending(false);
         setIsStreaming(true);
         isStreamingRef.current = true;
@@ -126,6 +137,7 @@ export default function ChatPage() {
         isStreamingRef.current = false;
         setIsStreaming(false);
         setStreamingContent("");
+        setStreamingConvId(null);
 
         const finalText = fullContent.trim()
           ? fullContent
@@ -137,6 +149,7 @@ export default function ChatPage() {
         setIsStreaming(false);
         setIsPending(false);
         setStreamingContent("");
+        setStreamingConvId(null);
         if (err instanceof Error && err.name === "AbortError") return;
         setLocalError("Connection lost. Please retry.");
       }
@@ -190,17 +203,11 @@ export default function ChatPage() {
 
   // -------------------------------------------------------------------------
   // Handle file upload (image or PDF).
-  //
-  // When the user also typed an instruction:
-  //   → upload for context only, stream ONE combined AI response.
-  // When no instruction:
-  //   → show the file analysis/summary as the assistant reply.
   // -------------------------------------------------------------------------
   const handleUpload = async (file: File, instruction?: string) => {
     const isImage = file.type.startsWith("image/");
     const trimmedInstruction = instruction?.trim() ?? "";
 
-    // User-visible label for their message
     const userContent = trimmedInstruction
       ? `${isImage ? "📷" : "📄"} ${file.name} — ${trimmedInstruction}`
       : `${isImage ? "📷 Uploaded image" : "📄 Uploaded PDF"}: ${file.name}`;
@@ -246,8 +253,8 @@ export default function ChatPage() {
       const contextNote = data.contextNote?.trim() ?? "";
       const summary = data.summary?.trim() ?? "";
       const kindLabel = data.kind === "pdf" ? "📄 PDF Analyzed" : "🖼️ Image Analyzed";
+      void summary;
 
-      // Always inject the file context as a hidden system message
       if (contextNote) {
         const contextLabel = isImage
           ? `[FILE_CONTEXT:image filename="${file.name}"]\n\nThe user uploaded an image. Here is the complete analysis:\n\n${contextNote}`
@@ -258,9 +265,6 @@ export default function ChatPage() {
       setIsUploading(false);
 
       if (trimmedInstruction) {
-        // --- Single combined response (file context + instruction) ---
-        // Build history: existing context → existing chat → upload label msg
-        //   → new system context → instruction (merged into userMsg already)
         const systemMsgs = preMessages.filter((m) => m.role === "system");
         const chatMsgs = preMessages.filter((m) => m.role !== "system");
         const contextMsg: ChatMessage | null = contextNote
@@ -281,7 +285,6 @@ export default function ChatPage() {
 
         await streamChat(finalHistory, convId);
       } else {
-        // --- No instruction: ask intent-first for both images and PDFs ---
         const intentMsg =
           data.kind === "pdf"
             ? `**${kindLabel}: ${data.filename ?? file.name}**\n\nYour PDF is loaded and ready. What would you like me to do?\n\n- **Summarize** — give me a full summary\n- **Explain** — break down key concepts\n- **Quiz me** — create practice questions\n- **Translate** — translate the content\n\nOr just ask me anything about it.`
@@ -304,6 +307,12 @@ export default function ChatPage() {
   const visibleMessages = (currentConversation?.messages ?? []).filter(
     (m) => m.role !== "system",
   );
+
+  // Only show the streaming bubble in the conversation that started the stream
+  const activeStreamingContent =
+    streamingContent && currentConversation?.id === streamingConvId
+      ? streamingContent
+      : undefined;
 
   return (
     <div className="flex h-[100dvh] w-full bg-background text-foreground overflow-hidden">
@@ -374,13 +383,13 @@ export default function ChatPage() {
           </div>
         </header>
 
-        {/* Messages area */}
-        <div className="flex-1 overflow-y-auto p-4 sm:p-6 pb-[160px] md:pb-6">
+        {/* Messages area — overscroll-none prevents iOS bounce interfering with input */}
+        <div className="flex-1 overflow-y-auto overscroll-none p-4 sm:p-6 pb-[168px] md:pb-6">
           <MessageList
             messages={visibleMessages}
-            isPending={isPending}
+            isPending={isPending && currentConversation?.id === streamingConvId}
             isUploading={isUploading}
-            streamingMessage={streamingContent || undefined}
+            streamingMessage={activeStreamingContent}
             error={localError}
             onRetry={handleRetry}
           />

@@ -164,7 +164,6 @@ router.get("/exam/:id", sessionMiddleware, async (req, res) => {
     res.status(404).json({ error: "This exam has expired.", code: "EXAM_EXPIRED" });
     return;
   }
-  // Access key removed — join with exam code only
   const u = req.user!;
   if (exam.submittedUserIds.has(u.id)) { res.status(409).json({ error: "You have already submitted this exam.", code: "ALREADY_SUBMITTED" }); return; }
   if (exam.maxAttempts && exam.maxAttempts > 0 && exam.submittedUserIds.size >= exam.maxAttempts) {
@@ -179,6 +178,9 @@ router.get("/exam/:id", sessionMiddleware, async (req, res) => {
   });
 });
 
+// ---------------------------------------------------------------------------
+// BUG-02 FIX: Exam submission now updates streak + bestScore just like quiz/submit.
+// ---------------------------------------------------------------------------
 router.post("/exam/submit", sessionMiddleware, async (req, res, next) => {
   try {
     const parsed = SubmitQuizBody.safeParse(req.body);
@@ -221,7 +223,18 @@ router.post("/exam/submit", sessionMiddleware, async (req, res, next) => {
     const percent = Math.round((score / Math.max(total, 1)) * 100);
     stored.submittedUserIds.add(u.id);
     await insertQuizAttempt({ userId: u.id, subject, score, total, percent });
-    res.json({ quizId, score, total, percent, results, streak: { currentStreak: u.currentStreak, bestStreak: u.bestStreak, bestScore: u.bestScore } });
+
+    const today = todayKey();
+    let newCurrent = u.currentStreak;
+    if (u.lastActiveDate !== today) {
+      const yesterday = new Date(Date.now() - 86400000).toISOString().slice(0, 10);
+      newCurrent = u.lastActiveDate === yesterday ? u.currentStreak + 1 : 1;
+    }
+    const newBestStreak = Math.max(u.bestStreak, newCurrent);
+    const newBestScore = Math.max(u.bestScore, percent);
+    await updateUser(u.id, { currentStreak: newCurrent, bestStreak: newBestStreak, bestScore: newBestScore, lastActiveDate: today });
+
+    res.json({ quizId, score, total, percent, results, streak: { currentStreak: newCurrent, bestStreak: newBestStreak, bestScore: newBestScore } });
   } catch (err) { next(err); }
 });
 

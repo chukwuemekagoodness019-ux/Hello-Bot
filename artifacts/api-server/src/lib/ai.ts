@@ -2,6 +2,7 @@ import { openrouter } from "@workspace/integrations-openrouter-ai";
 import OpenAI from "openai";
 
 const REQUEST_TIMEOUT_MS = 12000;
+const CHUNK_STALL_MS = 30_000;
 const VISION_TIMEOUT_MS = 28000;
 const MAX_ATTEMPTS = 2;
 export const FALLBACK_MESSAGE = "⚠️ AI temporarily unavailable. Please try again.";
@@ -17,6 +18,7 @@ const OPENROUTER_VISION_MODELS = [
 const OPENAI_CHAT_MODEL = "gpt-4o-mini";
 const OPENAI_VISION_MODEL = "gpt-4o-mini";
 const DEEPSEEK_CHAT_MODEL = "deepseek-chat";
+const GEMINI_CHAT_MODEL = "gemini-1.5-flash";
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -28,6 +30,63 @@ const deepseek = process.env.DEEPSEEK_API_KEY
       baseURL: "https://api.deepseek.com/v1",
     })
   : null;
+
+const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
+const gemini = geminiKey
+  ? new OpenAI({
+      apiKey: geminiKey,
+      baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+    })
+  : null;
+
+// ---------------------------------------------------------------------------
+// Response cache — in-memory, 500-entry max, 24-hour TTL.
+// Keyed by FNV-1a hash of the last 4 messages (prevents stale hits
+// from different conversations while still serving repeated questions).
+// ---------------------------------------------------------------------------
+const CACHE_MAX = 500;
+const CACHE_TTL_MS = 24 * 60 * 60 * 1000;
+
+interface CacheEntry { text: string; ts: number; }
+const responseCache = new Map<string, CacheEntry>();
+
+function fnv1a(s: string): string {
+  let h = 0x811c9dc5;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 0x01000193) >>> 0;
+  }
+  return h.toString(36);
+}
+
+function makeCacheKey(messages: ChatMessage[]): string {
+  const relevant = messages.slice(-4);
+  return fnv1a(relevant.map((m) => `${m.role}:${m.content.trim()}`).join("|||"));
+}
+
+function getCachedResponse(messages: ChatMessage[]): string | null {
+  const key = makeCacheKey(messages);
+  const entry = responseCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.ts > CACHE_TTL_MS) { responseCache.delete(key); return null; }
+  return entry.text;
+}
+
+function setCachedResponse(messages: ChatMessage[], text: string): void {
+  if (!text || text === FALLBACK_MESSAGE || text === STREAM_FALLBACK) return;
+  const key = makeCacheKey(messages);
+  if (responseCache.size >= CACHE_MAX) {
+    const oldest = responseCache.keys().next().value;
+    if (oldest !== undefined) responseCache.delete(oldest);
+  }
+  responseCache.set(key, { text, ts: Date.now() });
+}
+
+export function getCacheStats(): { size: number; max: number } {
+  return { size: responseCache.size, max: CACHE_MAX };
+}
+
+// ---------------------------------------------------------------------------
 
 const SYSTEM_PROMPT = `You are AI Study Assistant — a sharp, warm, and highly effective study companion built for students, especially in Nigeria. You think like a top student who is also a patient teacher.
 
@@ -157,7 +216,7 @@ function classifyError(err: unknown): { reason: string; isQuota: boolean } {
     lower.includes("quota") || lower.includes("insufficient") ||
     lower.includes("balance") || lower.includes("billing");
   let reason = "error";
-  if (lower.includes("timed out") || lower.includes("timeout")) reason = "timeout";
+  if (lower.includes("timed out") || lower.includes("timeout") || lower.includes("stall")) reason = "timeout";
   else if (isQuota) reason = "quota";
   else if (status) reason = `http ${status}`;
   return { reason, isQuota };
@@ -178,6 +237,11 @@ function logSuccess(stage: string, providerName: string, ms: number) {
   console.info(`[AI ROUTER] ${stage} :: ${providerName} → success (${ms}ms)`);
 }
 
+function logCacheHit(stage: string) {
+  // eslint-disable-next-line no-console
+  console.info(`[AI CACHE] ${stage} :: cache hit — serving cached response`);
+}
+
 async function runChain(stage: string, providers: Provider[], timeoutMs = REQUEST_TIMEOUT_MS): Promise<string> {
   for (const p of providers) {
     const start = Date.now();
@@ -195,12 +259,13 @@ export type AiProviderStatus = "Active" | "Out of Credits" | "Unavailable" | "No
 export interface AiProviderHealth {
   status: AiProviderStatus;
   latency: number | null;
-  role: "Primary" | "Fallback #1" | "Fallback #2";
+  role: "Primary" | "Fallback #1" | "Fallback #2" | "Fallback #3";
 }
 export interface AiStatusResult {
   openrouter: AiProviderHealth;
   openai: AiProviderHealth;
   deepseek: AiProviderHealth;
+  gemini: AiProviderHealth;
   checkedAt: string;
 }
 
@@ -228,18 +293,20 @@ export async function getAiStatus(): Promise<AiStatusResult> {
     return cachedStatus.data;
   }
   const tinyMessages = [{ role: "user" as const, content: "ping" }];
-  const [orHealth, oaHealth, dsHealth] = await Promise.all([
+  const [orHealth, oaHealth, dsHealth, gmHealth] = await Promise.all([
     pingOne(
       !!process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY || !!process.env.OPENROUTER_API_KEY,
       () => openrouter.chat.completions.create({ model: OPENROUTER_CHAT_MODEL, max_tokens: 1, messages: tinyMessages }),
     ),
     pingOne(!!openai, () => openai!.chat.completions.create({ model: OPENAI_CHAT_MODEL, max_tokens: 1, messages: tinyMessages })),
     pingOne(!!deepseek, () => deepseek!.chat.completions.create({ model: DEEPSEEK_CHAT_MODEL, max_tokens: 1, messages: tinyMessages })),
+    pingOne(!!gemini, () => gemini!.chat.completions.create({ model: GEMINI_CHAT_MODEL, max_tokens: 1, messages: tinyMessages })),
   ]);
   const data: AiStatusResult = {
     openrouter: { ...orHealth, role: "Primary" },
     openai: { ...oaHealth, role: "Fallback #1" },
     deepseek: { ...dsHealth, role: "Fallback #2" },
+    gemini: { ...gmHealth, role: "Fallback #3" },
     checkedAt: new Date().toISOString(),
   };
   cachedStatus = { at: Date.now(), data };
@@ -261,6 +328,12 @@ function buildOpenAIMessages(messages: ChatMessage[]) {
 }
 
 export async function chatComplete(messages: ChatMessage[]): Promise<string> {
+  const cached = getCachedResponse(messages);
+  if (cached) {
+    logCacheHit("chat");
+    return cached;
+  }
+
   const providers: Provider[] = [
     {
       name: "openrouter",
@@ -301,8 +374,26 @@ export async function chatComplete(messages: ChatMessage[]): Promise<string> {
         return r.choices[0]?.message?.content ?? "";
       },
     },
+    {
+      name: "gemini",
+      available: !!gemini,
+      call: async () => {
+        const r = await gemini!.chat.completions.create({
+          model: GEMINI_CHAT_MODEL,
+          max_tokens: 4096,
+          temperature: 0.7,
+          messages: buildOpenAIMessages(messages),
+        });
+        return r.choices[0]?.message?.content ?? "";
+      },
+    },
   ];
-  return runChain("chat", providers, REQUEST_TIMEOUT_MS);
+
+  const result = await runChain("chat", providers, REQUEST_TIMEOUT_MS);
+  if (result !== FALLBACK_MESSAGE) {
+    setCachedResponse(messages, result);
+  }
+  return result;
 }
 
 export async function visionAnalyze(input: VisionInput): Promise<string> {
@@ -447,6 +538,19 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact s
         return r.choices[0]?.message?.content ?? "";
       },
     },
+    {
+      name: "gemini",
+      available: !!gemini,
+      call: async () => {
+        const r = await gemini!.chat.completions.create({
+          model: GEMINI_CHAT_MODEL,
+          max_tokens: 4096,
+          temperature: 0.4,
+          messages: quizMessages,
+        });
+        return r.choices[0]?.message?.content ?? "";
+      },
+    },
   ];
 
   const raw = await runChain("quiz", providers, 60_000);
@@ -473,20 +577,31 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact s
 // Streaming chat — iterates SSE chunks from the first available provider.
 // onChunk is called for every text delta as it arrives.
 // Returns the full assembled reply string.
+//
+// BUG-10 FIX: Each chunk read races against CHUNK_STALL_MS timeout so a
+// slow-draining or stalled provider is detected and failed over from.
 // ---------------------------------------------------------------------------
 export async function chatCompleteStream(
   messages: ChatMessage[],
   onChunk: (text: string) => void,
 ): Promise<string> {
+  const cached = getCachedResponse(messages);
+  if (cached) {
+    logCacheHit("stream");
+    onChunk(cached);
+    return cached;
+  }
+
   const oaiMessages = buildOpenAIMessages(messages);
   const orAvail =
     !!process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY ||
     !!process.env.OPENROUTER_API_KEY;
 
+  type StreamChunk = { choices: Array<{ delta?: { content?: string | null } }> };
   interface StreamEntry {
     name: string;
     available: boolean;
-    create: () => Promise<AsyncIterable<{ choices: Array<{ delta?: { content?: string | null } }> }>>;
+    create: () => Promise<AsyncIterable<StreamChunk>>;
   }
 
   const providers: StreamEntry[] = [
@@ -500,7 +615,7 @@ export async function chatCompleteStream(
           stream: true,
           max_tokens: 4096,
           temperature: 0.7,
-        }) as unknown as Promise<AsyncIterable<{ choices: Array<{ delta?: { content?: string | null } }> }>>,
+        }) as unknown as Promise<AsyncIterable<StreamChunk>>,
     },
     {
       name: "openai",
@@ -512,7 +627,7 @@ export async function chatCompleteStream(
           stream: true,
           max_tokens: 4096,
           temperature: 0.7,
-        }) as unknown as Promise<AsyncIterable<{ choices: Array<{ delta?: { content?: string | null } }> }>>,
+        }) as unknown as Promise<AsyncIterable<StreamChunk>>,
     },
     {
       name: "deepseek",
@@ -524,7 +639,19 @@ export async function chatCompleteStream(
           stream: true,
           max_tokens: 4096,
           temperature: 0.7,
-        }) as unknown as Promise<AsyncIterable<{ choices: Array<{ delta?: { content?: string | null } }> }>>,
+        }) as unknown as Promise<AsyncIterable<StreamChunk>>,
+    },
+    {
+      name: "gemini",
+      available: !!gemini,
+      create: () =>
+        gemini!.chat.completions.create({
+          model: GEMINI_CHAT_MODEL,
+          messages: oaiMessages,
+          stream: true,
+          max_tokens: 4096,
+          temperature: 0.7,
+        }) as unknown as Promise<AsyncIterable<StreamChunk>>,
     },
   ];
 
@@ -532,25 +659,47 @@ export async function chatCompleteStream(
     if (!provider.available) continue;
 
     for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
+      const streamStart = Date.now();
       try {
         const stream = await withTimeout(
           provider.create(),
           REQUEST_TIMEOUT_MS,
           provider.name,
         );
+
         let full = "";
-        for await (const chunk of stream) {
-          const delta = chunk.choices?.[0]?.delta?.content ?? "";
+        const iter = (stream as AsyncIterable<StreamChunk>)[Symbol.asyncIterator]();
+
+        while (true) {
+          let timerHandle: ReturnType<typeof setTimeout> | null = null;
+          const stallPromise = new Promise<never>((_, reject) => {
+            timerHandle = setTimeout(
+              () => reject(new Error(`${provider.name} chunk stall after ${CHUNK_STALL_MS}ms`)),
+              CHUNK_STALL_MS,
+            );
+          });
+
+          let result: IteratorResult<StreamChunk>;
+          try {
+            result = await Promise.race([iter.next(), stallPromise]);
+          } finally {
+            if (timerHandle !== null) clearTimeout(timerHandle);
+          }
+          if (result.done) break;
+
+          const delta = result.value.choices?.[0]?.delta?.content ?? "";
           if (delta) {
             full += delta;
             onChunk(delta);
           }
         }
+
         if (full.trim()) {
-          logSuccess("stream", provider.name, 0);
+          logSuccess("stream", provider.name, Date.now() - streamStart);
+          setCachedResponse(messages, full);
           return full;
         }
-        break; // empty response — try next provider
+        break;
       } catch (err) {
         logFallback("stream", provider.name, err);
         if (attempt === MAX_ATTEMPTS) break;

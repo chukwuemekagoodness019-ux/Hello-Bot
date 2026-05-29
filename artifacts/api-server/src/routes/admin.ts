@@ -8,12 +8,14 @@ import {
 } from "../lib/db-users";
 import { adminLogin, adminMiddleware } from "../lib/admin";
 import { AdminLoginBody, AdminUpgradeUserBody } from "@workspace/api-zod";
-import { getAiStatus } from "../lib/ai";
+import { getAiStatus, getCacheStats } from "../lib/ai";
 import { getFlags, setFlag } from "../lib/flags";
 import { getAnnouncement, setAnnouncement, clearAnnouncement } from "../lib/announcements";
 import type { Announcement } from "../lib/announcements";
 import { getErrorLog, clearErrorLog } from "../lib/error-log";
 import { getActiveExams, revokeExam } from "../lib/exam-store";
+import { setRejectionReason, getRejectionReason } from "../lib/rejection-reasons";
+import { sendAdminMessage, getUserMessages, clearUserMessages } from "../lib/user-messages";
 
 const router: IRouter = Router();
 
@@ -70,6 +72,7 @@ router.get("/admin/payments", async (_req, res, next) => {
       id: p.id, userId: p.userId, plan: p.plan, transactionId: p.transactionId,
       screenshotName: p.screenshotName ?? null, hasScreenshot: !!p.screenshotData,
       status: p.status, createdAt: p.createdAt.toISOString(),
+      rejectionReason: p.status === "rejected" ? getRejectionReason(p.id) : null,
     })));
   } catch (e) {
     next(e);
@@ -121,13 +124,19 @@ router.post("/admin/payments/:id/approve", async (req, res, next) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// BUG-06 FIX: Reject now accepts an optional reason body field.
+// Reason is stored in-memory (rejection-reasons.ts) so users can read it.
+// ---------------------------------------------------------------------------
 router.post("/admin/payments/:id/reject", async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { res.status(400).json({ error: "Bad id", code: "BAD_ID" }); return; }
+    const reason = String((req.body as Record<string, unknown>)?.reason || "").trim();
     const updated = await updatePaymentStatus(id, "rejected");
     if (!updated) { res.status(404).json({ error: "Payment not found", code: "NOT_FOUND" }); return; }
-    res.json({ id, status: "rejected" });
+    if (reason) setRejectionReason(id, reason);
+    res.json({ id, status: "rejected", reason: reason || null });
   } catch (e) {
     next(e);
   }
@@ -162,10 +171,40 @@ router.post("/admin/users/:id/revoke", async (req, res, next) => {
   }
 });
 
+// ---------------------------------------------------------------------------
+// Admin → user messaging (in-memory, survives as long as process is alive).
+// ---------------------------------------------------------------------------
+router.post("/admin/users/:id/message", async (req, res, next) => {
+  try {
+    const id = req.params.id as string;
+    if (!id) { res.status(400).json({ error: "Bad id", code: "BAD_ID" }); return; }
+    const text = String((req.body as Record<string, unknown>)?.text || "").trim();
+    const fromAdmin = String((req.body as Record<string, unknown>)?.fromAdmin || "Admin").trim().slice(0, 60);
+    if (!text) { res.status(400).json({ error: "text is required", code: "MISSING_TEXT" }); return; }
+    const user = await getUserById(id);
+    if (!user) { res.status(404).json({ error: "User not found", code: "NOT_FOUND" }); return; }
+    const msg = sendAdminMessage(id, text, fromAdmin || "Admin");
+    res.json(msg);
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.get("/admin/users/:id/messages", (req, res) => {
+  const id = req.params.id as string;
+  res.json(getUserMessages(id));
+});
+
+router.delete("/admin/users/:id/messages", (req, res) => {
+  const id = req.params.id as string;
+  clearUserMessages(id);
+  res.json({ ok: true });
+});
+
 router.get("/admin/ai-status", async (_req, res, next) => {
   try {
-    const status = await getAiStatus();
-    res.json(status);
+    const [status, cache] = await Promise.all([getAiStatus(), Promise.resolve(getCacheStats())]);
+    res.json({ ...status, cache });
   } catch (e) {
     next(e);
   }
@@ -177,7 +216,7 @@ router.get("/admin/flags", (_req, res) => {
 
 router.put("/admin/flags/:key", (req, res) => {
   const key = req.params.key;
-  const enabled = req.body?.enabled;
+  const enabled = (req.body as Record<string, unknown>)?.enabled;
   if (typeof enabled !== "boolean") {
     res.status(400).json({ error: "enabled must be boolean", code: "BAD_BODY" });
     return;
@@ -195,8 +234,8 @@ router.get("/admin/announcement", (_req, res) => {
 });
 
 router.post("/admin/announcement", (req, res) => {
-  const text = String(req.body?.text || "").trim();
-  const type = String(req.body?.type || "");
+  const text = String((req.body as Record<string, unknown>)?.text || "").trim();
+  const type = String((req.body as Record<string, unknown>)?.type || "");
   if (!text) {
     res.status(400).json({ error: "text is required", code: "MISSING_TEXT" });
     return;
@@ -242,7 +281,7 @@ router.put("/admin/feedback/:id/status", async (req, res, next) => {
   try {
     const id = parseInt(req.params.id, 10);
     if (isNaN(id)) { res.status(400).json({ error: "Bad id", code: "BAD_ID" }); return; }
-    const status = String(req.body?.status || "");
+    const status = String((req.body as Record<string, unknown>)?.status || "");
     if (!["unread", "investigating", "resolved"].includes(status)) {
       res.status(400).json({ error: "Invalid status", code: "BAD_STATUS" });
       return;
