@@ -455,6 +455,15 @@ export default function ChatPage() {
         </div>
       </div>
 
+      {/* Solid background barrier — sits at z-[15], below the nav (z-20) but above
+          scroll content. Blocks message text from showing through the semi-transparent
+          glass nav. Height matches nav-safe exactly. Do NOT remove. */}
+      <div
+        className="fixed bottom-0 left-0 right-0 md:hidden bg-background z-[15]"
+        style={{ height: "calc(3.5rem + env(safe-area-inset-bottom, 0px))" }}
+        aria-hidden="true"
+      />
+
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden nav-safe">
         <button

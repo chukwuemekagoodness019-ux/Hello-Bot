@@ -18,8 +18,11 @@ const upload = multer({
 });
 
 function getPlans() {
-  const weeklyPrice = process.env.WEEKLY_PREMIUM_PRICE || "₦2,000";
-  const monthlyPrice = process.env.MONTHLY_PREMIUM_PRICE || "₦6,000";
+  // Prices are read from environment variables on every request.
+  // Set WEEKLY_PREMIUM_PRICE and MONTHLY_PREMIUM_PRICE in the server environment
+  // to control pricing. No hardcoded fallbacks — empty string if not configured.
+  const weeklyPrice = process.env.WEEKLY_PREMIUM_PRICE ?? "";
+  const monthlyPrice = process.env.MONTHLY_PREMIUM_PRICE ?? "";
   return [
     { id: "weekly", label: "1 Week Premium", priceLabel: weeklyPrice },
     { id: "monthly", label: "1 Month Premium", priceLabel: monthlyPrice },
@@ -27,6 +30,9 @@ function getPlans() {
 }
 
 router.get("/payment/info", sessionMiddleware, (_req, res) => {
+  // no-store prevents browsers and proxies from caching pricing data so that
+  // environment-variable changes are reflected immediately on next open.
+  res.setHeader("Cache-Control", "no-store, no-cache");
   res.json({
     accountName: process.env.VITE_ACCOUNT_NAME || process.env.PAYMENT_ACCOUNT_NAME || "",
     accountNumber: process.env.VITE_ACCOUNT_NUMBER || process.env.PAYMENT_ACCOUNT_NUMBER || "",
