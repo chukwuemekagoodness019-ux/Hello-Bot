@@ -76,7 +76,7 @@ router.post("/payment/submit", sessionMiddleware, upload.single("screenshot"), a
     const u = req.user!;
     const plan = String(req.body?.plan || "");
     const transactionId = String(req.body?.transactionId || "").trim();
-    if (!PLANS.some((p) => p.id === plan)) {
+    if (!getPlans().some((p) => p.id === plan)) {
       res.status(400).json({ error: "Invalid plan", code: "BAD_PLAN" });
       return;
     }
