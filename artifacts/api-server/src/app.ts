@@ -9,6 +9,10 @@ import { logger } from "./lib/logger";
 
 const app: Express = express();
 
+// Trust the first proxy hop so req.ip resolves to the real client IP
+// on hosting platforms (e.g. Render.com) that sit behind a reverse proxy.
+app.set("trust proxy", 1);
+
 app.use(
   pinoHttp({
     logger,

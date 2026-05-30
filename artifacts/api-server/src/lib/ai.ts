@@ -206,7 +206,7 @@ async function tryProvider(p: Provider, timeoutMs: number): Promise<{ ok: true; 
   return { ok: false, error: lastError };
 }
 
-function classifyError(err: unknown): { reason: string; isQuota: boolean } {
+function classifyError(err: unknown): { reason: string; isQuota: boolean; isAuthError: boolean } {
   const msg = err instanceof Error ? err.message : String(err);
   const status = err && typeof err === "object" ? (err as { status?: number }).status : undefined;
   const code = err && typeof err === "object" ? String((err as { code?: unknown }).code ?? "") : "";
@@ -215,11 +215,19 @@ function classifyError(err: unknown): { reason: string; isQuota: boolean } {
     status === 402 || status === 429 ||
     lower.includes("quota") || lower.includes("insufficient") ||
     lower.includes("balance") || lower.includes("billing");
+  // Auth errors: wrong key, expired key, unauthorized — distinct from transient outage
+  const isAuthError =
+    status === 401 ||
+    (status === 400 && (lower.includes("key") || lower.includes("auth") || lower.includes("api_key"))) ||
+    lower.includes("api_key_invalid") || lower.includes("invalid_api_key") ||
+    lower.includes("key not valid") || lower.includes("not a valid api") ||
+    lower.includes("api key not valid") || lower.includes("invalid argument");
   let reason = "error";
   if (lower.includes("timed out") || lower.includes("timeout") || lower.includes("stall")) reason = "timeout";
   else if (isQuota) reason = "quota";
+  else if (isAuthError) reason = "invalid_key";
   else if (status) reason = `http ${status}`;
-  return { reason, isQuota };
+  return { reason, isQuota, isAuthError };
 }
 
 function logFallback(stage: string, providerName: string, err: unknown) {
@@ -255,7 +263,7 @@ async function runChain(stage: string, providers: Provider[], timeoutMs = REQUES
   return FALLBACK_MESSAGE;
 }
 
-export type AiProviderStatus = "Active" | "Out of Credits" | "Unavailable" | "Not Configured";
+export type AiProviderStatus = "Active" | "Out of Credits" | "Invalid Key" | "Unavailable" | "Not Configured";
 export interface AiProviderHealth {
   status: AiProviderStatus;
   latency: number | null;
@@ -283,8 +291,10 @@ async function pingOne(
     await withTimeout(call(), PING_TIMEOUT_MS, "ping");
     return { status: "Active", latency: Date.now() - start };
   } catch (err) {
-    const { isQuota } = classifyError(err);
-    return { status: isQuota ? "Out of Credits" : "Unavailable", latency: null };
+    const { isQuota, isAuthError } = classifyError(err);
+    if (isQuota) return { status: "Out of Credits", latency: null };
+    if (isAuthError) return { status: "Invalid Key", latency: null };
+    return { status: "Unavailable", latency: null };
   }
 }
 

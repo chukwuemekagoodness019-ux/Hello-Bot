@@ -297,9 +297,11 @@ export default function ExamPage() {
       answersRef.current = {};
       setHasSubmitted(false);
       setTabViolations(0);
+      const hasTimer = quiz.timeMinutes != null && quiz.timeMinutes < 999;
+      setEnableTimer(hasTimer);
       setState("running");
       setAutoJoining(false);
-      if (quiz.timeMinutes && quiz.timeMinutes < 999) {
+      if (hasTimer) {
         startTimer(quiz.timeMinutes * 60);
       }
     } catch {

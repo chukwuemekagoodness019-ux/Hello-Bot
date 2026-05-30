@@ -35,7 +35,7 @@ type AdminPayment = {
   rejectionReason: string | null;
 };
 
-type ProviderStatus = "Active" | "Out of Credits" | "Unavailable" | "Not Configured";
+type ProviderStatus = "Active" | "Out of Credits" | "Invalid Key" | "Unavailable" | "Not Configured";
 interface ProviderHealth { status: ProviderStatus; latency: number | null; role: string; }
 interface AiStatus {
   openrouter: ProviderHealth;
@@ -514,6 +514,7 @@ export default function AdminPage() {
                     if (!p) return null;
                     const color = p.status === "Active" ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
                       : p.status === "Out of Credits" ? "text-yellow-500 bg-yellow-500/10 border-yellow-500/20"
+                      : p.status === "Invalid Key" ? "text-orange-500 bg-orange-500/10 border-orange-500/20"
                       : p.status === "Not Configured" ? "text-muted-foreground bg-muted border-border"
                       : "text-red-500 bg-red-500/10 border-red-500/20";
                     return (

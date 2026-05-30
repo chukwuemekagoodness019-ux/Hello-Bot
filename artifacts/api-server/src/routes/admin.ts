@@ -8,6 +8,7 @@ import {
 } from "../lib/db-users";
 import { adminLogin, adminMiddleware } from "../lib/admin";
 import { AdminLoginBody, AdminUpgradeUserBody } from "@workspace/api-zod";
+import { checkRateLimit } from "../lib/rate-limit";
 import { getAiStatus, getCacheStats } from "../lib/ai";
 import { getFlags, setFlag } from "../lib/flags";
 import { getAnnouncement, setAnnouncement, clearAnnouncement } from "../lib/announcements";
@@ -20,6 +21,11 @@ import { sendAdminMessage, getUserMessages, clearUserMessages } from "../lib/use
 const router: IRouter = Router();
 
 router.post("/admin/login", (req, res) => {
+  const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
+  if (!checkRateLimit(`admin_login:${ip}`, 10, 15 * 60 * 1000)) {
+    res.status(429).json({ error: "Too many login attempts. Try again in 15 minutes.", code: "RATE_LIMITED" });
+    return;
+  }
   const parsed = AdminLoginBody.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: "Invalid login", code: "INVALID_BODY" });

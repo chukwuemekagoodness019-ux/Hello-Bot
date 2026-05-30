@@ -2,6 +2,7 @@ import { Router, type IRouter } from "express";
 import { userEmailExists, createUser, getUserByEmail } from "../lib/db-users";
 import crypto from "node:crypto";
 import { setSessionCookie, COOKIE_NAME } from "../lib/session";
+import { checkRateLimit } from "../lib/rate-limit";
 
 const router: IRouter = Router();
 
@@ -28,6 +29,11 @@ async function verifyPassword(password: string, stored: string): Promise<boolean
 
 router.post("/auth/register", async (req, res, next) => {
   try {
+    const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
+    if (!checkRateLimit(`auth_register:${ip}`, 10, 60 * 60 * 1000)) {
+      res.status(429).json({ error: "Too many registration attempts. Please try again later.", code: "RATE_LIMITED" });
+      return;
+    }
     const email = String(req.body?.email || "").trim().toLowerCase();
     const password = String(req.body?.password || "").trim();
     const displayName = String(req.body?.displayName || "").trim().slice(0, 60);
@@ -59,6 +65,11 @@ router.post("/auth/register", async (req, res, next) => {
 
 router.post("/auth/login", async (req, res, next) => {
   try {
+    const ip = req.ip ?? req.socket.remoteAddress ?? "unknown";
+    if (!checkRateLimit(`auth_login:${ip}`, 20, 15 * 60 * 1000)) {
+      res.status(429).json({ error: "Too many login attempts. Please try again in 15 minutes.", code: "RATE_LIMITED" });
+      return;
+    }
     const email = String(req.body?.email || "").trim().toLowerCase();
     const password = String(req.body?.password || "").trim();
 

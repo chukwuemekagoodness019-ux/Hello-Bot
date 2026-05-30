@@ -1,0 +1,1 @@
+- [Study-Buddy-AI architecture & hardening](study-buddy-ai-arch.md) — AI chain, auth, rate limits, volatile state, and Phases A–F bug fixes.
