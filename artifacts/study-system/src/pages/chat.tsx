@@ -318,7 +318,7 @@ export default function ChatPage() {
       : undefined;
 
   return (
-    <div className="flex h-[100dvh] w-full bg-background text-foreground overflow-hidden">
+    <div className="flex h-full w-full bg-background text-foreground overflow-hidden">
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-all duration-300 md:hidden"
@@ -436,7 +436,7 @@ export default function ChatPage() {
         </header>
 
         {/* Messages area — overscroll-none prevents iOS bounce interfering with input */}
-        <div className="flex-1 overflow-y-auto overscroll-none px-4 sm:px-6 pt-4 sm:pt-6 pb-[168px] md:pb-6">
+        <div className="flex-1 overflow-y-auto overscroll-none px-4 sm:px-6 pt-4 sm:pt-6 pb-52 md:pb-6">
           <MessageList
             messages={visibleMessages}
             isPending={isPending && currentConversation?.id === streamingConvId}
@@ -448,13 +448,13 @@ export default function ChatPage() {
         </div>
 
         {/* Input bar — fixed above bottom nav on mobile */}
-        <div className="fixed left-0 right-0 bottom-[56px] md:static md:bottom-auto p-3 glass-subtle border-t border-white/8 z-30 shrink-0">
+        <div className="fixed left-0 right-0 input-bar-bottom md:static md:bottom-auto p-3 glass-subtle border-t border-white/8 z-40 shrink-0">
           <InputBar onSend={handleSend} onUpload={handleUpload} disabled={isBusy || isOffline} />
         </div>
       </div>
 
       {/* Mobile bottom nav */}
-      <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden h-14">
+      <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden nav-safe">
         <button
           className="flex-1 flex flex-col items-center justify-center gap-0.5 text-primary"
           onClick={() => setSidebarOpen(false)}

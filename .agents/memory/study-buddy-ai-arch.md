@@ -34,6 +34,13 @@ quizStore (GC'd every 4h), responseCache (500 LRU), rejection-reasons (capped 10
   - Phase 6: Split-screen anti-cheat — resize listener triggers if window.innerWidth / screen.availWidth < 0.6
   - Phase 7: Chat message list `p-4 sm:p-6 pb-[168px]` — sm:p-6 shorthand overwrote pb-[168px] at 640–767px; fixed to `px-4 sm:px-6 pt-4 sm:pt-6 pb-[168px]`
 
+## UI Stabilization — Layout Architecture (applied to all pages)
+viewport-fit=cover is SET in index.html — iOS safe-area insets are real (34px on iPhone X+).
+App wrapper pattern: `<div className="h-[100dvh] overflow-hidden flex flex-col">` in App() wraps OfflineBanner + WouterRouter. AppRoutes wraps content in `flex-1 min-h-0 flex flex-col overflow-hidden` + inner `flex-1 min-h-0 relative`. Each page uses `h-full` (chat) or `h-full overflow-y-auto` (quiz/exam/admin) — never `min-h-[100dvh]` or `min-h-screen`.
+Safe-area CSS utilities in index.css: `.nav-safe` (min-height+pb for bottom nav), `.input-bar-bottom` (bottom: calc(3.5rem + safe-area)), `.pb-nav-safe` (outer container pb).
+Critical Tailwind pitfall: shorthand `p-N sm:p-M` overrides any `pb-X` at the sm breakpoint — always split into `px-N sm:px-M pt-N sm:pt-M pb-X` when you need independent bottom padding.
+Chat messages area: `pb-52` (208px) to clear the fixed input bar at max expansion (file chip + max-height textarea = up to 192px total).
+
 ## Free Limits
 messages: free=25 + grace=2 = 27; quizzes: free=2; voice: free=5.
 

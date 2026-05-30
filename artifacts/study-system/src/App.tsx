@@ -31,17 +31,19 @@ function AppRoutes() {
   const [location] = useLocation();
   const isAdmin = location === "/system-core";
   return (
-    <>
+    <div className="flex-1 min-h-0 flex flex-col overflow-hidden">
       {!isAdmin && <AnnouncementBanner />}
-      <Switch>
-        <Route path="/" component={ChatPage} />
-        <Route path="/quiz" component={QuizPage} />
-        <Route path="/exam" component={ExamPage} />
-        <Route path="/system-core" component={AdminPage} />
-        <Route component={NotFound} />
-      </Switch>
+      <div className="flex-1 min-h-0 relative">
+        <Switch>
+          <Route path="/" component={ChatPage} />
+          <Route path="/quiz" component={QuizPage} />
+          <Route path="/exam" component={ExamPage} />
+          <Route path="/system-core" component={AdminPage} />
+          <Route component={NotFound} />
+        </Switch>
+      </div>
       {location !== "/" && !isAdmin && <FeedbackButton />}
-    </>
+    </div>
   );
 }
 
@@ -58,7 +60,7 @@ function AuthGate({ children }: { children: React.ReactNode }) {
 
   if (auth === "loading") {
     return (
-      <div className="min-h-[100dvh] bg-background flex items-center justify-center">
+      <div className="h-full bg-background flex items-center justify-center">
         <div className="w-7 h-7 rounded-full border-2 border-primary border-t-transparent animate-spin" />
       </div>
     );
@@ -77,13 +79,15 @@ function App() {
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
           <ChatHistoryProvider>
-            <OfflineBanner />
-            <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
-              <AuthGate>
-                <MotivationalSplash />
-                <AppRoutes />
-              </AuthGate>
-            </WouterRouter>
+            <div className="h-[100dvh] overflow-hidden flex flex-col">
+              <OfflineBanner />
+              <WouterRouter base={import.meta.env.BASE_URL.replace(/\/$/, "")}>
+                <AuthGate>
+                  <MotivationalSplash />
+                  <AppRoutes />
+                </AuthGate>
+              </WouterRouter>
+            </div>
             <Toaster />
           </ChatHistoryProvider>
         </TooltipProvider>

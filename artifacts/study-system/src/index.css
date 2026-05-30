@@ -278,3 +278,15 @@
     margin: 1rem 0;
   }
 }
+
+/* ── iOS safe-area inset utilities (viewport-fit=cover is active) ── */
+.nav-safe {
+  min-height: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+.input-bar-bottom {
+  bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+}
+.pb-nav-safe {
+  padding-bottom: calc(3.5rem + env(safe-area-inset-bottom, 0px));
+}

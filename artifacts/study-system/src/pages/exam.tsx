@@ -425,7 +425,7 @@ export default function ExamPage() {
   const userLoaded = user !== undefined;
 
   const BottomNav = () => (
-    <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden h-14">
+    <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden nav-safe">
       <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
         <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
       </button>
@@ -440,7 +440,7 @@ export default function ExamPage() {
 
   if (autoJoining) {
     return (
-      <div className="min-h-[100dvh] bg-slate-950 text-slate-100 flex flex-col items-center justify-center gap-4">
+      <div className="h-full bg-slate-950 text-slate-100 flex flex-col items-center justify-center gap-4">
         <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center">
           <FileText className="w-7 h-7 text-primary animate-pulse" />
         </div>
@@ -452,7 +452,7 @@ export default function ExamPage() {
 
   if (!flags.exam) {
     return (
-      <div className="min-h-[100dvh] bg-slate-950 text-slate-100 flex flex-col pb-14 md:pb-0">
+      <div className="h-full bg-slate-950 text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
         <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
           <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
@@ -477,7 +477,7 @@ export default function ExamPage() {
 
   if (userLoaded && !isPremium && state === "form" && !autoJoining) {
     return (
-      <div className="min-h-[100dvh] bg-slate-950 text-slate-100 flex flex-col pb-14 md:pb-0">
+      <div className="h-full bg-slate-950 text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
         <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
           <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
@@ -535,7 +535,7 @@ export default function ExamPage() {
   }
 
   return (
-    <div className="min-h-[100dvh] bg-slate-950 text-slate-100 flex flex-col pb-14 md:pb-0">
+    <div className="h-full bg-slate-950 text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
       <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
         <button
           className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors"
@@ -556,7 +556,7 @@ export default function ExamPage() {
         )}
       </header>
 
-      <main className="flex-1 p-4 sm:p-6 max-w-2xl w-full mx-auto pb-32">
+      <main className="flex-1 px-4 sm:px-6 pt-4 sm:pt-6 max-w-2xl w-full mx-auto pb-32">
         {state === "form" && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div>
@@ -930,7 +930,7 @@ export default function ExamPage() {
       </main>
 
       {state === "running" && (
-        <div className="fixed bottom-14 md:bottom-0 left-0 right-0 p-4 glass-subtle border-t border-white/8 z-30">
+        <div className="fixed input-bar-bottom md:bottom-0 left-0 right-0 p-4 glass-subtle border-t border-white/8 z-30">
           <div className="max-w-2xl mx-auto flex gap-3 items-center">
             <div className="flex-1 text-sm text-slate-400">
               {answeredCount < totalQuestions

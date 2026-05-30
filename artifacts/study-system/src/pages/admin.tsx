@@ -407,7 +407,7 @@ export default function AdminPage() {
 
   if (!token) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background p-4">
+      <div className="h-full flex items-center justify-center bg-background p-4 overflow-y-auto">
         <form onSubmit={handleLogin} className="w-full max-w-sm space-y-4 p-8 bg-card rounded-2xl border border-border shadow-2xl relative overflow-hidden">
           <div className="absolute top-0 left-0 w-full h-1 bg-primary" />
           <div className="space-y-2 text-center mb-8">
@@ -438,7 +438,7 @@ export default function AdminPage() {
   ];
 
   return (
-    <div className="min-h-screen bg-background text-foreground">
+    <div className="h-full bg-background text-foreground overflow-y-auto">
       {/* Header */}
       <header className="border-b border-border px-4 sm:px-6 py-4 flex items-center justify-between">
         <div>
