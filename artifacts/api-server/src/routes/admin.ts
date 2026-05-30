@@ -207,9 +207,10 @@ router.delete("/admin/users/:id/messages", (req, res) => {
   res.json({ ok: true });
 });
 
-router.get("/admin/ai-status", async (_req, res, next) => {
+router.get("/admin/ai-status", async (req, res, next) => {
   try {
-    const [status, cache] = await Promise.all([getAiStatus(), Promise.resolve(getCacheStats())]);
+    const force = req.query.force === "true";
+    const [status, cache] = await Promise.all([getAiStatus(force), Promise.resolve(getCacheStats())]);
     res.json({ ...status, cache });
   } catch (e) {
     next(e);

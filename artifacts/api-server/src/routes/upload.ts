@@ -101,7 +101,9 @@ router.post("/upload", sessionMiddleware, upload.single("file"), async (req, res
         if (typeof (globalThis as any).DOMMatrix === "undefined") {
           (globalThis as any).DOMMatrix = class {};
         }
-        const pdfModule = await import("pdf-parse");
+        // Import the internal lib path directly to skip pdf-parse's test-file loader
+        // which throws "ENOENT: no such file or directory" in bundled/ESM contexts.
+        const pdfModule = await import("pdf-parse/lib/pdf-parse.js");
         const pdfParse = (pdfModule as any).default ?? pdfModule;
         const data = await pdfParse(file.buffer);
         extractedText = (data.text ?? "").trim();

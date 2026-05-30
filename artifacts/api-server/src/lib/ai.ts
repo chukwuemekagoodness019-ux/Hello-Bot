@@ -206,15 +206,21 @@ async function tryProvider(p: Provider, timeoutMs: number): Promise<{ ok: true; 
   return { ok: false, error: lastError };
 }
 
-function classifyError(err: unknown): { reason: string; isQuota: boolean; isAuthError: boolean } {
+function classifyError(err: unknown): { reason: string; isQuota: boolean; isRateLimited: boolean; isAuthError: boolean } {
   const msg = err instanceof Error ? err.message : String(err);
   const status = err && typeof err === "object" ? (err as { status?: number }).status : undefined;
   const code = err && typeof err === "object" ? String((err as { code?: unknown }).code ?? "") : "";
   const lower = `${msg} ${code}`.toLowerCase();
+  // 429 = rate limited (temporary); 402 / billing text = out of credits (account issue)
+  const isRateLimited =
+    status === 429 ||
+    lower.includes("rate limit") || lower.includes("ratelimit") || lower.includes("too many requests");
   const isQuota =
-    status === 402 || status === 429 ||
-    lower.includes("quota") || lower.includes("insufficient") ||
-    lower.includes("balance") || lower.includes("billing");
+    !isRateLimited && (
+      status === 402 ||
+      lower.includes("quota") || lower.includes("insufficient") ||
+      lower.includes("balance") || lower.includes("billing") || lower.includes("exceeded your current quota")
+    );
   // Auth errors: wrong key, expired key, unauthorized — distinct from transient outage
   const isAuthError =
     status === 401 ||
@@ -224,10 +230,11 @@ function classifyError(err: unknown): { reason: string; isQuota: boolean; isAuth
     lower.includes("api key not valid") || lower.includes("invalid argument");
   let reason = "error";
   if (lower.includes("timed out") || lower.includes("timeout") || lower.includes("stall")) reason = "timeout";
+  else if (isRateLimited) reason = "rate_limited";
   else if (isQuota) reason = "quota";
   else if (isAuthError) reason = "invalid_key";
   else if (status) reason = `http ${status}`;
-  return { reason, isQuota, isAuthError };
+  return { reason, isQuota, isRateLimited, isAuthError };
 }
 
 function logFallback(stage: string, providerName: string, err: unknown) {
@@ -263,7 +270,7 @@ async function runChain(stage: string, providers: Provider[], timeoutMs = REQUES
   return FALLBACK_MESSAGE;
 }
 
-export type AiProviderStatus = "Active" | "Out of Credits" | "Invalid Key" | "Unavailable" | "Not Configured";
+export type AiProviderStatus = "Active" | "Out of Credits" | "Rate Limited" | "Invalid Key" | "Unavailable" | "Not Configured";
 export interface AiProviderHealth {
   status: AiProviderStatus;
   latency: number | null;
@@ -291,15 +298,16 @@ async function pingOne(
     await withTimeout(call(), PING_TIMEOUT_MS, "ping");
     return { status: "Active", latency: Date.now() - start };
   } catch (err) {
-    const { isQuota, isAuthError } = classifyError(err);
+    const { isRateLimited, isQuota, isAuthError } = classifyError(err);
+    if (isRateLimited) return { status: "Rate Limited", latency: null };
     if (isQuota) return { status: "Out of Credits", latency: null };
     if (isAuthError) return { status: "Invalid Key", latency: null };
     return { status: "Unavailable", latency: null };
   }
 }
 
-export async function getAiStatus(): Promise<AiStatusResult> {
-  if (cachedStatus && Date.now() - cachedStatus.at < PING_CACHE_MS) {
+export async function getAiStatus(force = false): Promise<AiStatusResult> {
+  if (!force && cachedStatus && Date.now() - cachedStatus.at < PING_CACHE_MS) {
     return cachedStatus.data;
   }
   const tinyMessages = [{ role: "user" as const, content: "ping" }];

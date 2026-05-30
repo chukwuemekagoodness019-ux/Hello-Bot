@@ -6,12 +6,13 @@ import { ChatSidebar } from "@/components/chat/sidebar";
 import { PaymentModal } from "@/components/payment-modal";
 import { PwaInstallButton } from "@/components/pwa-install-button";
 import { useIsOffline } from "@/components/offline-banner";
-import { Menu, Flame, Plus, GraduationCap, FileText, MessageSquare } from "lucide-react";
+import { Menu, Flame, Plus, GraduationCap, FileText, MessageSquare, Bell, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import { useChatHistory } from "@/hooks/use-chat-history";
 import type { ChatMessage } from "@/hooks/use-chat-history";
 import { usePaymentModal } from "@/hooks/use-payment-modal";
+import { useUserMessages } from "@/hooks/use-user-messages";
 
 const BASE = import.meta.env.BASE_URL as string;
 
@@ -22,6 +23,8 @@ export default function ChatPage() {
     useChatHistory();
   const paymentModal = usePaymentModal();
   const [, setLocation] = useLocation();
+  const { messages: adminMessages, unreadCount, open: msgOpen, setOpen: setMsgOpen, handleOpen: handleMsgOpen } =
+    useUserMessages(!!user);
 
   const [localError, setLocalError] = useState<string | null>(null);
   const [isUploading, setIsUploading] = useState(false);
@@ -323,6 +326,38 @@ export default function ChatPage() {
         />
       )}
 
+      {/* Admin messages panel */}
+      {msgOpen && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4">
+          <div className="fixed inset-0 bg-black/60 backdrop-blur-sm" onClick={() => setMsgOpen(false)} />
+          <div className="relative z-10 w-full max-w-md rounded-2xl border border-white/10 bg-sidebar shadow-2xl max-h-[70vh] flex flex-col">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-white/8 shrink-0">
+              <h2 className="font-semibold text-base flex items-center gap-2">
+                <Bell className="w-4 h-4 text-primary" />
+                Messages from Admin
+              </h2>
+              <Button size="icon" variant="ghost" className="w-7 h-7" onClick={() => setMsgOpen(false)}>
+                <X className="w-4 h-4" />
+              </Button>
+            </div>
+            <div className="overflow-y-auto flex-1 px-5 py-4 space-y-3">
+              {adminMessages.length === 0 ? (
+                <p className="text-sm text-muted-foreground text-center py-6">No messages yet.</p>
+              ) : (
+                [...adminMessages].reverse().map((msg) => (
+                  <div key={msg.id} className="bg-white/5 rounded-xl p-4 border border-white/8">
+                    <p className="text-sm leading-relaxed">{msg.text}</p>
+                    <p className="text-[11px] text-muted-foreground mt-2">
+                      From {msg.fromAdmin} · {new Date(msg.ts).toLocaleString()}
+                    </p>
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
       <div
         className={`fixed inset-y-0 left-0 z-50 w-[85%] max-w-sm bg-sidebar border-r border-white/8 transform transition-transform duration-300 ease-in-out ${
           sidebarOpen ? "translate-x-0" : "-translate-x-full"
@@ -362,6 +397,23 @@ export default function ChatPage() {
               New Chat
             </Button>
             <PwaInstallButton />
+            {/* Admin messages notification bell */}
+            <div className="relative">
+              <Button
+                size="icon"
+                variant="ghost"
+                className="w-9 h-9 rounded-full text-slate-400 hover:text-slate-200"
+                onClick={handleMsgOpen}
+                title="Messages from Admin"
+              >
+                <Bell className="w-4 h-4" />
+                {unreadCount > 0 && (
+                  <span className="absolute -top-0.5 -right-0.5 w-4 h-4 rounded-full bg-red-500 text-white text-[10px] font-bold flex items-center justify-center leading-none">
+                    {unreadCount > 9 ? "9+" : unreadCount}
+                  </span>
+                )}
+              </Button>
+            </div>
             <Link href="/exam">
               <Button
                 size="icon"
@@ -384,7 +436,7 @@ export default function ChatPage() {
         </header>
 
         {/* Messages area — overscroll-none prevents iOS bounce interfering with input */}
-        <div className="flex-1 overflow-y-auto overscroll-none p-4 sm:p-6 pb-[168px] md:pb-6">
+        <div className="flex-1 overflow-y-auto overscroll-none px-4 sm:px-6 pt-4 sm:pt-6 pb-[168px] md:pb-6">
           <MessageList
             messages={visibleMessages}
             isPending={isPending && currentConversation?.id === streamingConvId}

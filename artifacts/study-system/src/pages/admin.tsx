@@ -35,7 +35,7 @@ type AdminPayment = {
   rejectionReason: string | null;
 };
 
-type ProviderStatus = "Active" | "Out of Credits" | "Invalid Key" | "Unavailable" | "Not Configured";
+type ProviderStatus = "Active" | "Out of Credits" | "Rate Limited" | "Invalid Key" | "Unavailable" | "Not Configured";
 interface ProviderHealth { status: ProviderStatus; latency: number | null; role: string; }
 interface AiStatus {
   openrouter: ProviderHealth;
@@ -132,10 +132,11 @@ export default function AdminPage() {
     } catch {}
   };
 
-  const fetchAiStatus = async (t: string) => {
+  const fetchAiStatus = async (t: string, force = false) => {
     setAiLoading(true);
     try {
-      const r = await fetch(`${BASE}api/admin/ai-status`, { headers: adminHeaders(t) });
+      const url = force ? `${BASE}api/admin/ai-status?force=true` : `${BASE}api/admin/ai-status`;
+      const r = await fetch(url, { headers: adminHeaders(t) });
       if (r.ok) setAiStatus(await r.json());
     } catch {} finally {
       setAiLoading(false);
@@ -502,7 +503,7 @@ export default function AdminPage() {
                 <h2 className="text-lg font-semibold flex items-center gap-2">
                   <Activity className="w-5 h-5 text-primary" />AI Provider Status
                 </h2>
-                <Button size="sm" variant="ghost" onClick={() => token && fetchAiStatus(token)} disabled={aiLoading}>
+                <Button size="sm" variant="ghost" onClick={() => token && fetchAiStatus(token, true)} disabled={aiLoading}>
                   <RefreshCw className={`w-4 h-4 mr-1.5 ${aiLoading ? "animate-spin" : ""}`} />
                   Refresh
                 </Button>
@@ -513,6 +514,7 @@ export default function AdminPage() {
                     const p = aiStatus[key];
                     if (!p) return null;
                     const color = p.status === "Active" ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20"
+                      : p.status === "Rate Limited" ? "text-orange-400 bg-orange-400/10 border-orange-400/20"
                       : p.status === "Out of Credits" ? "text-yellow-500 bg-yellow-500/10 border-yellow-500/20"
                       : p.status === "Invalid Key" ? "text-orange-500 bg-orange-500/10 border-orange-500/20"
                       : p.status === "Not Configured" ? "text-muted-foreground bg-muted border-border"

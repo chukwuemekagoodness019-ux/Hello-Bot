@@ -17,17 +17,21 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
-const PLANS = [
-  { id: "weekly", label: "1 Week Premium", priceLabel: "₦2,000" },
-  { id: "monthly", label: "1 Month Premium", priceLabel: "₦6,000" },
-] as const;
+function getPlans() {
+  const weeklyPrice = process.env.WEEKLY_PREMIUM_PRICE || "₦2,000";
+  const monthlyPrice = process.env.MONTHLY_PREMIUM_PRICE || "₦6,000";
+  return [
+    { id: "weekly", label: "1 Week Premium", priceLabel: weeklyPrice },
+    { id: "monthly", label: "1 Month Premium", priceLabel: monthlyPrice },
+  ] as const;
+}
 
 router.get("/payment/info", sessionMiddleware, (_req, res) => {
   res.json({
     accountName: process.env.VITE_ACCOUNT_NAME || process.env.PAYMENT_ACCOUNT_NAME || "",
     accountNumber: process.env.VITE_ACCOUNT_NUMBER || process.env.PAYMENT_ACCOUNT_NUMBER || "",
     provider: process.env.VITE_BANK_NAME || process.env.PAYMENT_PROVIDER || "",
-    plans: PLANS,
+    plans: getPlans(),
   });
 });
 

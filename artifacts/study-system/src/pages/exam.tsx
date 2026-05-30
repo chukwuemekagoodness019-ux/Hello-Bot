@@ -141,6 +141,35 @@ export default function ExamPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [state]);
 
+  // Split-screen detection: fires if the window is resized to less than 60% of
+  // the available screen width (a strong indicator of a side-by-side split view).
+  useEffect(() => {
+    if (state !== "running") return;
+    const SPLIT_RATIO = 0.6;
+    const checkSplit = () => {
+      const available = screen.availWidth || screen.width;
+      if (available > 0 && window.innerWidth / available < SPLIT_RATIO) {
+        setTabViolations((v) => {
+          const next = v + 1;
+          if (next === 1) {
+            toast({
+              title: "⚠️ Warning: Split-screen detected",
+              description: "One more violation and your exam will be auto-submitted.",
+              variant: "destructive",
+            });
+          } else if (next >= 2) {
+            toast({ title: "🚨 Exam auto-submitted due to cheating detection." });
+            doSubmit();
+          }
+          return next;
+        });
+      }
+    };
+    window.addEventListener("resize", checkSplit);
+    return () => window.removeEventListener("resize", checkSplit);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [state]);
+
   useEffect(() => {
     if (autoJoinAttemptedRef.current) return;
     autoJoinAttemptedRef.current = true;
@@ -327,6 +356,7 @@ export default function ExamPage() {
     try {
       const res = await fetch(`${BASE}api/exam/submit`, {
         method: "POST",
+        credentials: "include",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           quizId: quiz.quizId,
