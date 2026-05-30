@@ -11,7 +11,7 @@ const BASE = import.meta.env.BASE_URL as string;
 
 export function PaymentModal() {
   const { isOpen, close } = usePaymentModal();
-  const { data: paymentInfo, isLoading } = useGetPaymentInfo();
+  const { data: paymentInfo, isLoading, refetch } = useGetPaymentInfo();
   const [selectedPlan, setSelectedPlan] = useState<string>("weekly");
   const [transactionId, setTransactionId] = useState("");
   const [screenshot, setScreenshot] = useState<File | null>(null);
@@ -26,8 +26,12 @@ export function PaymentModal() {
       setTransactionId("");
       setScreenshot(null);
       setSelectedPlan("weekly");
+      // Always fetch fresh pricing from the server when the modal opens so that
+      // environment-variable price changes are reflected immediately without
+      // requiring a full page reload or waiting for the React Query cache to expire.
+      void refetch();
     }
-  }, [isOpen]);
+  }, [isOpen, refetch]);
 
   const handleCopy = (text: string) => {
     navigator.clipboard.writeText(text);

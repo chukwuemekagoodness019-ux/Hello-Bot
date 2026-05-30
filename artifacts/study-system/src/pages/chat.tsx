@@ -436,7 +436,7 @@ export default function ChatPage() {
         </header>
 
         {/* Messages area — overscroll-none prevents iOS bounce interfering with input */}
-        <div className="flex-1 overflow-y-auto overscroll-none px-4 sm:px-6 pt-4 sm:pt-6 pb-52 md:pb-6">
+        <div className="flex-1 overflow-y-auto overscroll-none px-4 sm:px-6 pt-4 sm:pt-6 pb-[230px] md:pb-6">
           <MessageList
             messages={visibleMessages}
             isPending={isPending && currentConversation?.id === streamingConvId}
@@ -447,8 +447,10 @@ export default function ChatPage() {
           />
         </div>
 
-        {/* Input bar — fixed above bottom nav on mobile */}
-        <div className="fixed left-0 right-0 input-bar-bottom md:static md:bottom-auto p-3 glass-subtle border-t border-white/8 z-40 shrink-0">
+        {/* Input bar — fixed above bottom nav on mobile.
+            bg-background (solid) is intentional: prevents message text from
+            bleeding through the bar as users scroll. Do NOT use glass/transparent. */}
+        <div className="fixed left-0 right-0 input-bar-bottom md:static md:bottom-auto p-3 bg-background border-t border-white/8 z-40 shrink-0">
           <InputBar onSend={handleSend} onUpload={handleUpload} disabled={isBusy || isOffline} />
         </div>
       </div>
