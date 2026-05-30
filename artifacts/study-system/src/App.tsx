@@ -49,13 +49,31 @@ function AppRoutes() {
 
 type AuthState = "loading" | "authed" | "unauthed";
 
+const AUTH_SESSION_KEY = "_auth_state";
+
 function AuthGate({ children }: { children: React.ReactNode }) {
-  const [auth, setAuth] = useState<AuthState>("loading");
+  // On repeat loads within the same session, read the cached auth state so the
+  // spinner is skipped and the app appears instantly. The fetch below always
+  // runs in the background to validate / refresh the state.
+  const [auth, setAuth] = useState<AuthState>(() => {
+    try {
+      const cached = sessionStorage.getItem(AUTH_SESSION_KEY) as AuthState | null;
+      if (cached === "authed" || cached === "unauthed") return cached;
+    } catch {}
+    return "loading";
+  });
 
   useEffect(() => {
     fetch(`${BASE}api/me`, { credentials: "include" })
-      .then((res) => setAuth(res.ok ? "authed" : "unauthed"))
-      .catch(() => setAuth("unauthed"));
+      .then((res) => {
+        const next: AuthState = res.ok ? "authed" : "unauthed";
+        setAuth(next);
+        try { sessionStorage.setItem(AUTH_SESSION_KEY, next); } catch {}
+      })
+      .catch(() => {
+        setAuth("unauthed");
+        try { sessionStorage.removeItem(AUTH_SESSION_KEY); } catch {}
+      });
   }, []);
 
   if (auth === "loading") {

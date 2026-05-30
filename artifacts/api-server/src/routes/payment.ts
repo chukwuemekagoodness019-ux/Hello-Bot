@@ -17,15 +17,31 @@ const upload = multer({
   limits: { fileSize: 5 * 1024 * 1024 },
 });
 
+/**
+ * Format a raw price value from an environment variable into Nigerian Naira.
+ * Accepts pre-formatted strings ("₦1,500") and raw integers ("1500" → "₦1,500").
+ * Returns an empty string when the env var is not set.
+ */
+function formatNairaPrice(raw: string | undefined): string {
+  const v = (raw ?? "").trim();
+  if (!v) return "";
+  // Already contains the ₦ symbol — pass through as-is.
+  if (v.includes("₦")) return v;
+  // Try to parse as a plain integer and add symbol + comma formatting.
+  const num = parseInt(v.replace(/,/g, ""), 10);
+  if (!isNaN(num)) return "₦" + num.toLocaleString("en-US");
+  // Unknown format — return raw value unchanged.
+  return v;
+}
+
 function getPlans() {
   // Prices are read from environment variables on every request.
-  // Set WEEKLY_PREMIUM_PRICE and MONTHLY_PREMIUM_PRICE in the server environment
-  // to control pricing. No hardcoded fallbacks — empty string if not configured.
-  const weeklyPrice = process.env.WEEKLY_PREMIUM_PRICE ?? "";
-  const monthlyPrice = process.env.MONTHLY_PREMIUM_PRICE ?? "";
+  // Set WEEKLY_PREMIUM_PRICE and MONTHLY_PREMIUM_PRICE in the server environment.
+  // Accepts raw integers (e.g. "1500") or pre-formatted strings (e.g. "₦1,500").
+  // Returns empty priceLabel when env var is not configured.
   return [
-    { id: "weekly", label: "1 Week Premium", priceLabel: weeklyPrice },
-    { id: "monthly", label: "1 Month Premium", priceLabel: monthlyPrice },
+    { id: "weekly",  label: "1 Week Premium",  priceLabel: formatNairaPrice(process.env.WEEKLY_PREMIUM_PRICE) },
+    { id: "monthly", label: "1 Month Premium", priceLabel: formatNairaPrice(process.env.MONTHLY_PREMIUM_PRICE) },
   ] as const;
 }
 

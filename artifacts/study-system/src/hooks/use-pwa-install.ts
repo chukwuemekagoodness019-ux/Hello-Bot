@@ -33,6 +33,14 @@ export function usePwaInstall() {
   const isIOS = detectIOS();
 
   useEffect(() => {
+    // Consume the globally pre-captured prompt (set in main.tsx before React mounted)
+    // to handle the case where beforeinstallprompt fired before this effect ran.
+    const pre = (window as any).__pwaInstallPrompt as BeforeInstallPromptEvent | undefined;
+    if (pre) {
+      setDeferredPrompt(pre);
+      (window as any).__pwaInstallPrompt = null;
+    }
+
     const handler = (e: Event) => {
       e.preventDefault();
       setDeferredPrompt(e as BeforeInstallPromptEvent);

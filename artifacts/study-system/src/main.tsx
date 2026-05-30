@@ -2,6 +2,21 @@ import { createRoot } from "react-dom/client";
 import App from "./App";
 import "./index.css";
 
+// Capture the PWA install prompt before React renders to eliminate the race
+// window between DOMContentLoaded (when React mounts) and the browser firing
+// beforeinstallprompt (which can arrive during or just after first render).
+// The usePwaInstall hook reads this global on mount and consumes it.
+if (typeof window !== "undefined") {
+  window.addEventListener(
+    "beforeinstallprompt",
+    (e) => {
+      e.preventDefault();
+      (window as any).__pwaInstallPrompt = e;
+    },
+    { once: true },
+  );
+}
+
 createRoot(document.getElementById("root")!).render(<App />);
 
 // Register the service worker (production builds only — keeps dev HMR clean).
