@@ -5,7 +5,7 @@ import { useToast } from "@/hooks/use-toast";
 import {
   Check, X, ArrowUp, Activity, RefreshCw, Users, CreditCard, Image,
   ToggleLeft, ToggleRight, Megaphone, MessageSquare, AlertTriangle, ShieldAlert,
-  FileText, Send,
+  FileText, Send, Trash2,
 } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL as string;
@@ -222,6 +222,20 @@ export default function AdminPage() {
     } finally {
       setLoginPending(false);
     }
+  };
+
+  const handleDeletePayment = (id: number) => {
+    setConfirmAction({
+      label: `Delete payment record #${id}? This is permanent and cannot be undone.`,
+      onConfirm: async () => {
+        try {
+          const res = await fetch(`${BASE}api/admin/payments/${id}`, { method: "DELETE", headers: adminHeaders(token!) });
+          if (res.ok) { toast({ title: "Payment deleted" }); fetchDashboard(token!); }
+          else { toast({ title: "Failed to delete payment", variant: "destructive" }); }
+        } catch { toast({ title: "Network error", variant: "destructive" }); }
+        setConfirmAction(null);
+      },
+    });
   };
 
   // Phase 5: opens reject dialog instead of immediately rejecting
@@ -703,6 +717,9 @@ export default function AdminPage() {
                             </Button>
                           </>
                         )}
+                        <Button size="sm" variant="ghost" className="h-8 gap-1 text-xs text-muted-foreground hover:text-red-500 hover:bg-red-500/10" onClick={() => handleDeletePayment(pay.id)}>
+                          <Trash2 className="w-3.5 h-3.5" />Delete
+                        </Button>
                       </div>
                     </div>
                   );

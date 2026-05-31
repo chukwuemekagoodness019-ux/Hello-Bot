@@ -46,3 +46,19 @@ messages: free=25 + grace=2 = 27; quizzes: free=2; voice: free=5.
 
 ## Pricing Env Vars
 WEEKLY_PREMIUM_PRICE, MONTHLY_PREMIUM_PRICE — set in Render env to override default ₦ prices.
+formatNairaPrice() in payment.ts formats raw integers to ₦ strings. payment-modal.tsx shows "—" as fallback when priceLabel is empty.
+
+## PWA Icons
+Brand icon stored at attached_assets/1780188862120_1780189173182.png — copy to public/icon-192.png, icon-512.png, apple-touch-icon.png for PWA icon replacement.
+
+## Admin Payment Deletion
+deletePaymentById() added to db-users.ts (Supabase DELETE). DELETE /admin/payments/:id route in admin.ts requires adminMiddleware. Delete button in admin.tsx uses confirmAction dialog (same pattern as other destructive actions) — Trash2 icon.
+
+## Announcement Dismissal
+AnnouncementBanner stores dismissed ID in localStorage under key "ann_dismissed_id" — persists across navigation. dismissedId initialised from localStorage via useState lazy initializer.
+
+## PDF OCR Fallback MIME Bug
+upload.ts: when PDF is image-based and falls back to visionAnalyze OCR, use mimeType:"image/jpeg" NOT "application/pdf". Vision APIs reject data:application/pdf;base64 URLs — they require image MIME types.
+
+## Exam Bottom Bar Bleed (Issue B)
+exam.tsx fixed submit bar: was `glass-subtle border-t border-white/8` (translucent bleed) → changed to `bg-background border-t border-border`. quiz.tsx has no floating action bar — no bleed issue there.

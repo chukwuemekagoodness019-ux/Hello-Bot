@@ -238,6 +238,11 @@ export async function updatePaymentStatus(id: number, status: string): Promise<P
   return toPayment(data as Record<string, unknown>);
 }
 
+export async function deletePaymentById(id: number): Promise<void> {
+  const { error } = await supabase.from("payments").delete().eq("id", id);
+  throwIfError(error, "deletePaymentById");
+}
+
 export async function getPaymentsByTransactionId(transactionId: string): Promise<Payment[]> {
   const { data, error } = await supabase
     .from("payments")

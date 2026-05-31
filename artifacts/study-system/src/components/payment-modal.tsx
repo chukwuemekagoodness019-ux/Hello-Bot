@@ -116,7 +116,7 @@ export function PaymentModal() {
                     }`}
                   >
                     <div className="font-semibold text-sm">{plan.label}</div>
-                    <div className="font-mono text-lg mt-1 text-primary">{plan.priceLabel}</div>
+                    <div className="font-mono text-lg mt-1 text-primary">{plan.priceLabel || "—"}</div>
                   </button>
                 ))}
               </div>

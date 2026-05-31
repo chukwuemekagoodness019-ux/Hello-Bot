@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { X } from "lucide-react";
 
 const BASE = import.meta.env.BASE_URL as string;
+const DISMISS_KEY = "ann_dismissed_id";
 
 interface Announcement {
   id: string;
@@ -17,7 +18,14 @@ const typeStyles: Record<string, string> = {
 };
 
 export function AnnouncementBanner() {
-  const [dismissedId, setDismissedId] = useState<string | null>(null);
+  const [dismissedId, setDismissedId] = useState<string | null>(() => {
+    try { return localStorage.getItem(DISMISS_KEY); } catch { return null; }
+  });
+
+  function dismiss(id: string) {
+    try { localStorage.setItem(DISMISS_KEY, id); } catch {}
+    setDismissedId(id);
+  }
 
   const { data } = useQuery<Announcement | null>({
     queryKey: ["announcement"],
@@ -39,7 +47,7 @@ export function AnnouncementBanner() {
     >
       <p className="flex-1 leading-snug">{data.text}</p>
       <button
-        onClick={() => setDismissedId(data.id)}
+        onClick={() => dismiss(data.id)}
         className="shrink-0 mt-0.5 opacity-60 hover:opacity-100 transition-opacity"
         aria-label="Dismiss announcement"
       >

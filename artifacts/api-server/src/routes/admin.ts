@@ -2,7 +2,7 @@ import { Router, type IRouter } from "express";
 import {
   countUsers, countPremiumUsers, countPaymentsByStatus,
   listUsersAdmin, listPaymentsAdmin,
-  getPaymentById, updatePaymentStatus,
+  getPaymentById, updatePaymentStatus, deletePaymentById,
   getUserById, updateUser,
   getFeedbackAdmin, deleteFeedbackById, updateFeedbackStatus,
 } from "../lib/db-users";
@@ -143,6 +143,19 @@ router.post("/admin/payments/:id/reject", async (req, res, next) => {
     if (!updated) { res.status(404).json({ error: "Payment not found", code: "NOT_FOUND" }); return; }
     if (reason) setRejectionReason(id, reason);
     res.json({ id, status: "rejected", reason: reason || null });
+  } catch (e) {
+    next(e);
+  }
+});
+
+router.delete("/admin/payments/:id", async (req, res, next) => {
+  try {
+    const id = parseInt(req.params.id, 10);
+    if (isNaN(id)) { res.status(400).json({ error: "Bad id", code: "BAD_ID" }); return; }
+    const payment = await getPaymentById(id);
+    if (!payment) { res.status(404).json({ error: "Payment not found", code: "NOT_FOUND" }); return; }
+    await deletePaymentById(id);
+    res.json({ ok: true });
   } catch (e) {
     next(e);
   }

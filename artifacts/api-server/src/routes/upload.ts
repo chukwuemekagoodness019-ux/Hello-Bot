@@ -118,7 +118,7 @@ router.post("/upload", sessionMiddleware, upload.single("file"), async (req, res
         try {
           const ocrResult = await visionAnalyze({
             imageBase64: file.buffer.toString("base64"),
-            mimeType: "application/pdf",
+            mimeType: "image/jpeg",
             prompt: "This is a scanned PDF document. Extract ALL text content from every page as accurately as possible. Output only the extracted text, preserving structure. Do not add commentary or analysis.",
           });
           if (ocrResult && !ocrResult.startsWith("⚠️") && ocrResult.length > 20) {

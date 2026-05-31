@@ -930,7 +930,7 @@ export default function ExamPage() {
       </main>
 
       {state === "running" && (
-        <div className="fixed input-bar-bottom md:bottom-0 left-0 right-0 p-4 glass-subtle border-t border-white/8 z-30">
+        <div className="fixed input-bar-bottom md:bottom-0 left-0 right-0 p-4 bg-background border-t border-border z-30">
           <div className="max-w-2xl mx-auto flex gap-3 items-center">
             <div className="flex-1 text-sm text-slate-400">
               {answeredCount < totalQuestions
