@@ -1,0 +1,1 @@
+src/routes/upload.ts(104,40): error TS2307: Cannot find module 'pdf-parse/lib/pdf-parse.js' or its corresponding type declarations.

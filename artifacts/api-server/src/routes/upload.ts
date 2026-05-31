@@ -101,7 +101,7 @@ router.post("/upload", sessionMiddleware, upload.single("file"), async (req, res
         if (typeof (globalThis as any).DOMMatrix === "undefined") {
           (globalThis as any).DOMMatrix = class {};
         }
-        const pdfModule = await import("pdf-parse/lib/pdf-parse.js");
+        const pdfModule = await import("pdf-parse");
         const pdfParse = (pdfModule as any).default ?? pdfModule;
         const data = await pdfParse(file.buffer);
         extractedText = (data.text ?? "").trim();
