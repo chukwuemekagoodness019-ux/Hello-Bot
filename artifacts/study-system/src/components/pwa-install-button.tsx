@@ -1,11 +1,16 @@
 import { Download, Share, Plus, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { usePwaInstall } from "@/hooks/use-pwa-install";
+import type { usePwaInstall } from "@/hooks/use-pwa-install";
 
-export function PwaInstallButton() {
-  const { canInstall, isIOS, install, showIOSGuide, closeIOSGuide } =
-    usePwaInstall();
+type PwaInstallState = ReturnType<typeof usePwaInstall>;
 
+export function PwaInstallButton({
+  canInstall,
+  isIOS,
+  install,
+  showIOSGuide,
+  closeIOSGuide,
+}: Pick<PwaInstallState, "canInstall" | "isIOS" | "install" | "showIOSGuide" | "closeIOSGuide">) {
   if (!canInstall && !showIOSGuide) return null;
 
   return (

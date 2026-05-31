@@ -5,6 +5,8 @@ import { MessageList } from "@/components/chat/message-list";
 import { ChatSidebar } from "@/components/chat/sidebar";
 import { PaymentModal } from "@/components/payment-modal";
 import { PwaInstallButton } from "@/components/pwa-install-button";
+import { PwaInstallBanner } from "@/components/pwa-install-banner";
+import { usePwaInstall } from "@/hooks/use-pwa-install";
 import { useIsOffline } from "@/components/offline-banner";
 import { Menu, Flame, Plus, GraduationCap, FileText, MessageSquare, Bell, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -305,6 +307,7 @@ export default function ChatPage() {
     }
   };
 
+  const pwaInstall = usePwaInstall();
   const isOffline = useIsOffline();
   const isBusy = isPending || isStreaming || isUploading;
   const visibleMessages = (currentConversation?.messages ?? []).filter(
@@ -396,7 +399,13 @@ export default function ChatPage() {
               <Plus className="w-4 h-4" />
               New Chat
             </Button>
-            <PwaInstallButton />
+            <PwaInstallButton
+              canInstall={pwaInstall.canInstall}
+              isIOS={pwaInstall.isIOS}
+              install={pwaInstall.install}
+              showIOSGuide={pwaInstall.showIOSGuide}
+              closeIOSGuide={pwaInstall.closeIOSGuide}
+            />
             {/* Admin messages notification bell */}
             <div className="relative">
               <Button
@@ -434,6 +443,8 @@ export default function ChatPage() {
             </Link>
           </div>
         </header>
+
+        <PwaInstallBanner canInstall={pwaInstall.canInstall} install={pwaInstall.install} />
 
         {/* Messages area — overscroll-none prevents iOS bounce interfering with input */}
         <div className="flex-1 overflow-y-auto overscroll-none px-4 sm:px-6 pt-4 sm:pt-6 pb-[230px] md:pb-6">

@@ -88,7 +88,7 @@ export function getCacheStats(): { size: number; max: number } {
 
 // ---------------------------------------------------------------------------
 
-const SYSTEM_PROMPT = `You are AI Study Assistant — a sharp, warm, and highly effective study companion built for students, especially in Nigeria. You think like a top student who is also a patient teacher.
+const SYSTEM_PROMPT_BASE = `You are AI Study Assistant — a sharp, warm, and highly effective study companion built for students, especially in Nigeria. You think like a top student who is also a patient teacher.
 
 **Core Identity**
 70% educational/study-focused, 30% general assistant. Always guide users back toward learning.
@@ -162,7 +162,24 @@ Occasionally (not every message) encourage the student. Rotate phrasing — neve
 - "You're asking the right questions — that's how mastery starts."
 - "Each session gets you closer. Stay consistent!"
 - After a quiz result is mentioned: "Every attempt teaches you something. Let's review the weak areas!"
-- Do NOT add a motivational line to every reply — reserve them for moments where the student needs a boost.`;
+- Do NOT add a motivational line to every reply — reserve them for moments where the student needs a boost.
+
+**Understanding Check (Global Rule)**
+After completing any substantive explanation of a study topic (not for quick factual lookups or greetings), always close with a brief understanding check — choose whichever fits naturally:
+- A mini-question: "Quick check: [short question about what was just explained]?"
+- A quiz nudge: "Want to test yourself? Head to the **Quiz tab** 🎯"
+- An offer to go deeper: "Want me to walk through an example or simplify any part?"
+Rotate these — never end every response with the same phrasing.`;
+
+function buildSystemPrompt(): string {
+  const today = new Date().toLocaleDateString("en-NG", {
+    weekday: "long",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
+  });
+  return `**Current Date:** Today is ${today}. Use this for any question about dates, current events, or "what day is it." Your training has a knowledge cutoff — for very recent events always say "I may not have the latest information on this — please verify from a current source."\n\n${SYSTEM_PROMPT_BASE}`;
+}
 
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -333,7 +350,7 @@ export async function getAiStatus(force = false): Promise<AiStatusResult> {
 
 function buildOpenAIMessages(messages: ChatMessage[]) {
   const result: { role: "system" | "user" | "assistant"; content: string }[] = [
-    { role: "system", content: SYSTEM_PROMPT },
+    { role: "system", content: buildSystemPrompt() },
   ];
   for (const m of messages) {
     if (m.role === "system") {
