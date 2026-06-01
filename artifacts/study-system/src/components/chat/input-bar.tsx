@@ -33,6 +33,7 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+  const voiceBaseRef = useRef<string>("");
   const menuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
@@ -141,33 +142,45 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
       recognitionRef.current = null;
     }
 
+    // Capture whatever the user already typed so voice is appended, not replaced.
+    voiceBaseRef.current = input.trim();
+
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
-    recognition.continuous = false;
+    recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-NG";
 
     recognition.onstart = () => setIsListening(true);
 
     recognition.onresult = (event: any) => {
-      const transcript = Array.from(event.results)
-        .map((r: any) => r[0].transcript)
-        .join("");
-      setInput(transcript);
-      if (event.results[event.results.length - 1].isFinal) {
-        setIsListening(false);
+      let finalTranscript = "";
+      let interimTranscript = "";
+      for (let i = 0; i < event.results.length; i++) {
+        const result = event.results[i];
+        if (result.isFinal) {
+          finalTranscript += result[0].transcript;
+        } else {
+          interimTranscript += result[0].transcript;
+        }
       }
+      const voiceText = (finalTranscript + interimTranscript).trim();
+      const base = voiceBaseRef.current;
+      setInput(base + (base && voiceText ? " " : "") + voiceText);
     };
 
     recognition.onerror = (event: any) => {
-      setIsListening(false);
       if (event.error === "not-allowed") {
+        setIsListening(false);
         toast({
           title: "Microphone permission denied.",
           description: "Allow microphone access in your browser settings.",
           variant: "destructive",
         });
+      } else if (event.error === "no-speech") {
+        // User paused — keep listening, do not toast or stop.
       } else if (event.error !== "aborted") {
+        setIsListening(false);
         toast({ title: "Didn't catch that. Please try again." });
       }
     };

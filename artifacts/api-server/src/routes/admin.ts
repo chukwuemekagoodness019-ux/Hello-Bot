@@ -202,22 +202,30 @@ router.post("/admin/users/:id/message", async (req, res, next) => {
     if (!text) { res.status(400).json({ error: "text is required", code: "MISSING_TEXT" }); return; }
     const user = await getUserById(id);
     if (!user) { res.status(404).json({ error: "User not found", code: "NOT_FOUND" }); return; }
-    const msg = sendAdminMessage(id, text, fromAdmin || "Admin");
+    const msg = await sendAdminMessage(id, text, fromAdmin || "Admin");
     res.json(msg);
   } catch (e) {
     next(e);
   }
 });
 
-router.get("/admin/users/:id/messages", (req, res) => {
-  const id = req.params.id as string;
-  res.json(getUserMessages(id));
+router.get("/admin/users/:id/messages", async (req, res, next) => {
+  try {
+    const id = req.params.id as string;
+    res.json(await getUserMessages(id));
+  } catch (e) {
+    next(e);
+  }
 });
 
-router.delete("/admin/users/:id/messages", (req, res) => {
-  const id = req.params.id as string;
-  clearUserMessages(id);
-  res.json({ ok: true });
+router.delete("/admin/users/:id/messages", async (req, res, next) => {
+  try {
+    const id = req.params.id as string;
+    await clearUserMessages(id);
+    res.json({ ok: true });
+  } catch (e) {
+    next(e);
+  }
 });
 
 router.get("/admin/ai-status", async (req, res, next) => {

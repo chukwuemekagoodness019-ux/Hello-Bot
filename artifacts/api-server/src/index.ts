@@ -1,5 +1,7 @@
 import app from "./app";
 import { logger } from "./lib/logger";
+import { initFlags } from "./lib/flags";
+import { initAnnouncements } from "./lib/announcements";
 
 const rawPort = process.env["PORT"];
 
@@ -14,6 +16,12 @@ const port = Number(rawPort);
 if (Number.isNaN(port) || port <= 0) {
   throw new Error(`Invalid PORT value: "${rawPort}"`);
 }
+
+// Bootstrap persistent stores from Supabase (graceful: falls back to
+// in-memory defaults if tables have not been created yet).
+Promise.all([initFlags(), initAnnouncements()]).catch((err) => {
+  logger.warn({ err }, "Persistent store bootstrap partial — using in-memory defaults");
+});
 
 app.listen(port, (err) => {
   if (err) {

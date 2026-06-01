@@ -41,7 +41,7 @@ interface AiStatus {
   openrouter: ProviderHealth;
   openai: ProviderHealth;
   deepseek: ProviderHealth;
-  gemini?: ProviderHealth;
+  groq?: ProviderHealth;
   cache?: { size: number; max: number };
   checkedAt: string;
 }
@@ -524,7 +524,7 @@ export default function AdminPage() {
               </div>
               <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
                 {aiStatus ? (
-                  (["openrouter", "openai", "deepseek", "gemini"] as const).map((key) => {
+                  (["openrouter", "openai", "deepseek", "groq"] as const).map((key) => {
                     const p = aiStatus[key];
                     if (!p) return null;
                     const color = p.status === "Active" ? "text-emerald-500 bg-emerald-500/10 border-emerald-500/20"

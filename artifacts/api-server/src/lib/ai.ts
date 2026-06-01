@@ -11,14 +11,13 @@ export const STREAM_FALLBACK = "I'm having trouble connecting to the AI right no
 const OPENROUTER_CHAT_MODEL = "openai/gpt-4o-mini";
 const OPENROUTER_VISION_MODELS = [
   "openai/gpt-4o-mini",
-  "google/gemini-flash-1.5",
   "qwen/qwen2.5-vl-72b-instruct",
 ];
 
 const OPENAI_CHAT_MODEL = "gpt-4o-mini";
 const OPENAI_VISION_MODEL = "gpt-4o-mini";
 const DEEPSEEK_CHAT_MODEL = "deepseek-chat";
-const GEMINI_CHAT_MODEL = "gemini-1.5-flash";
+const GROQ_CHAT_MODEL = "llama-3.3-70b-versatile";
 
 const openai = process.env.OPENAI_API_KEY
   ? new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
@@ -31,11 +30,10 @@ const deepseek = process.env.DEEPSEEK_API_KEY
     })
   : null;
 
-const geminiKey = process.env.GEMINI_API_KEY || process.env.GOOGLE_API_KEY;
-const gemini = geminiKey
+const groq = process.env.GROQ_API_KEY
   ? new OpenAI({
-      apiKey: geminiKey,
-      baseURL: "https://generativelanguage.googleapis.com/v1beta/openai/",
+      apiKey: process.env.GROQ_API_KEY,
+      baseURL: "https://api.groq.com/openai/v1",
     })
   : null;
 
@@ -297,7 +295,7 @@ export interface AiStatusResult {
   openrouter: AiProviderHealth;
   openai: AiProviderHealth;
   deepseek: AiProviderHealth;
-  gemini: AiProviderHealth;
+  groq: AiProviderHealth;
   checkedAt: string;
 }
 
@@ -328,20 +326,20 @@ export async function getAiStatus(force = false): Promise<AiStatusResult> {
     return cachedStatus.data;
   }
   const tinyMessages = [{ role: "user" as const, content: "ping" }];
-  const [orHealth, oaHealth, dsHealth, gmHealth] = await Promise.all([
+  const [orHealth, oaHealth, dsHealth, grqHealth] = await Promise.all([
     pingOne(
       !!process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY || !!process.env.OPENROUTER_API_KEY,
       () => openrouter.chat.completions.create({ model: OPENROUTER_CHAT_MODEL, max_tokens: 1, messages: tinyMessages }),
     ),
     pingOne(!!openai, () => openai!.chat.completions.create({ model: OPENAI_CHAT_MODEL, max_tokens: 1, messages: tinyMessages })),
     pingOne(!!deepseek, () => deepseek!.chat.completions.create({ model: DEEPSEEK_CHAT_MODEL, max_tokens: 1, messages: tinyMessages })),
-    pingOne(!!gemini, () => gemini!.chat.completions.create({ model: GEMINI_CHAT_MODEL, max_tokens: 1, messages: tinyMessages })),
+    pingOne(!!groq, () => groq!.chat.completions.create({ model: GROQ_CHAT_MODEL, max_tokens: 1, messages: tinyMessages })),
   ]);
   const data: AiStatusResult = {
     openrouter: { ...orHealth, role: "Primary" },
     openai: { ...oaHealth, role: "Fallback #1" },
     deepseek: { ...dsHealth, role: "Fallback #2" },
-    gemini: { ...gmHealth, role: "Fallback #3" },
+    groq: { ...grqHealth, role: "Fallback #3" },
     checkedAt: new Date().toISOString(),
   };
   cachedStatus = { at: Date.now(), data };
@@ -410,11 +408,11 @@ export async function chatComplete(messages: ChatMessage[]): Promise<string> {
       },
     },
     {
-      name: "gemini",
-      available: !!gemini,
+      name: "groq",
+      available: !!groq,
       call: async () => {
-        const r = await gemini!.chat.completions.create({
-          model: GEMINI_CHAT_MODEL,
+        const r = await groq!.chat.completions.create({
+          model: GROQ_CHAT_MODEL,
           max_tokens: 4096,
           temperature: 0.7,
           messages: buildOpenAIMessages(messages),
@@ -574,11 +572,11 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact s
       },
     },
     {
-      name: "gemini",
-      available: !!gemini,
+      name: "groq",
+      available: !!groq,
       call: async () => {
-        const r = await gemini!.chat.completions.create({
-          model: GEMINI_CHAT_MODEL,
+        const r = await groq!.chat.completions.create({
+          model: GROQ_CHAT_MODEL,
           max_tokens: 4096,
           temperature: 0.4,
           messages: quizMessages,
@@ -677,11 +675,11 @@ export async function chatCompleteStream(
         }) as unknown as Promise<AsyncIterable<StreamChunk>>,
     },
     {
-      name: "gemini",
-      available: !!gemini,
+      name: "groq",
+      available: !!groq,
       create: () =>
-        gemini!.chat.completions.create({
-          model: GEMINI_CHAT_MODEL,
+        groq!.chat.completions.create({
+          model: GROQ_CHAT_MODEL,
           messages: oaiMessages,
           stream: true,
           max_tokens: 4096,
