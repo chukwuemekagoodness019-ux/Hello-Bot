@@ -30,9 +30,9 @@ const deepseek = process.env.DEEPSEEK_API_KEY
     })
   : null;
 
-const groq = process.env.GROQ_API_KEY
+const groq = (process.env.GROQ_API_KEY || process.env.GROK_API_KEY)
   ? new OpenAI({
-      apiKey: process.env.GROQ_API_KEY,
+      apiKey: process.env.GROQ_API_KEY || process.env.GROK_API_KEY,
       baseURL: "https://api.groq.com/openai/v1",
     })
   : null;
@@ -535,7 +535,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact s
       call: async () => {
         const r = await openrouter.chat.completions.create({
           model: OPENROUTER_CHAT_MODEL,
-          max_tokens: 4096,
+          max_tokens: 8192,
           temperature: 0.4,
           response_format: { type: "json_object" },
           messages: quizMessages,
@@ -549,7 +549,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact s
       call: async () => {
         const r = await openai!.chat.completions.create({
           model: OPENAI_CHAT_MODEL,
-          max_tokens: 4096,
+          max_tokens: 8192,
           temperature: 0.4,
           response_format: { type: "json_object" },
           messages: quizMessages,
@@ -563,7 +563,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact s
       call: async () => {
         const r = await deepseek!.chat.completions.create({
           model: DEEPSEEK_CHAT_MODEL,
-          max_tokens: 4096,
+          max_tokens: 8192,
           temperature: 0.4,
           response_format: { type: "json_object" },
           messages: quizMessages,
@@ -577,7 +577,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact s
       call: async () => {
         const r = await groq!.chat.completions.create({
           model: GROQ_CHAT_MODEL,
-          max_tokens: 4096,
+          max_tokens: 8192,
           temperature: 0.4,
           messages: quizMessages,
         });

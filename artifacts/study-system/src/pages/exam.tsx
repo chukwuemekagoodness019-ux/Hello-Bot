@@ -99,6 +99,7 @@ export default function ExamPage() {
   const [quizResult, setQuizResult] = useState<QuizResult | null>(null);
   const [timeLeft, setTimeLeft] = useState(0);
   const [hasSubmitted, setHasSubmitted] = useState(false);
+  const hasSubmittedRef = useRef(false);
   const [tabViolations, setTabViolations] = useState(0);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
   const timerWarningsRef = useRef<Set<number>>(new Set());
@@ -130,7 +131,7 @@ export default function ExamPage() {
             });
           } else if (next >= 2) {
             toast({ title: "🚨 Exam auto-submitted due to cheating detection." });
-            doSubmit();
+            setTimeout(() => doSubmit(), 0);
           }
           return next;
         });
@@ -159,7 +160,7 @@ export default function ExamPage() {
             });
           } else if (next >= 2) {
             toast({ title: "🚨 Exam auto-submitted due to cheating detection." });
-            doSubmit();
+            setTimeout(() => doSubmit(), 0);
           }
           return next;
         });
@@ -268,6 +269,7 @@ export default function ExamPage() {
       setActiveQuiz(quiz);
       setAnswers({});
       answersRef.current = {};
+      hasSubmittedRef.current = false;
       setHasSubmitted(false);
       setTabViolations(0);
       refetchMe();
@@ -324,6 +326,7 @@ export default function ExamPage() {
       setActiveQuiz(quiz);
       setAnswers({});
       answersRef.current = {};
+      hasSubmittedRef.current = false;
       setHasSubmitted(false);
       setTabViolations(0);
       const hasTimer = quiz.timeMinutes != null && quiz.timeMinutes < 999;
@@ -347,7 +350,8 @@ export default function ExamPage() {
   };
 
   const doSubmit = async (quiz: Quiz | null = activeQuiz) => {
-    if (!quiz || hasSubmitted) return;
+    if (!quiz || hasSubmittedRef.current) return;
+    hasSubmittedRef.current = true;
     setHasSubmitted(true);
     setState("submitted");
     if (timerRef.current) { clearInterval(timerRef.current); timerRef.current = null; }
@@ -370,14 +374,21 @@ export default function ExamPage() {
 
       if (res.status === 409) {
         const data = await res.json().catch(() => ({})) as Record<string, unknown>;
-        toast({ title: String(data.error ?? "Submission blocked."), variant: "destructive" });
-        setHasSubmitted(false);
-        setState("running");
+        const errCode = (data as Record<string, unknown>).code as string | undefined;
+        if (errCode === "ALREADY_SUBMITTED") {
+          setState("form");
+        } else {
+          toast({ title: String(data.error ?? "Submission blocked."), variant: "destructive" });
+          hasSubmittedRef.current = false;
+          setHasSubmitted(false);
+          setState("running");
+        }
         return;
       }
 
       if (!res.ok) {
         toast({ title: "Failed to submit exam. Please try again.", variant: "destructive" });
+        hasSubmittedRef.current = false;
         setHasSubmitted(false);
         setState("running");
         return;
@@ -396,6 +407,7 @@ export default function ExamPage() {
       });
     } catch {
       toast({ title: "Network error during submission. Please try again.", variant: "destructive" });
+      hasSubmittedRef.current = false;
       setHasSubmitted(false);
       setState("running");
     } finally {
@@ -425,7 +437,7 @@ export default function ExamPage() {
   const userLoaded = user !== undefined;
 
   const BottomNav = () => (
-    <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden nav-safe">
+    <nav className="fixed bottom-0 inset-x-0 z-20 bg-slate-950/95 backdrop-blur-sm border-t border-white/8 flex md:hidden nav-safe">
       <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
         <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
       </button>
@@ -453,7 +465,7 @@ export default function ExamPage() {
   if (!flags.exam) {
     return (
       <div className="h-full bg-slate-950 text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
-        <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
+        <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-slate-950/95 backdrop-blur-sm sticky top-0 z-30">
           <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
           </button>
@@ -478,7 +490,7 @@ export default function ExamPage() {
   if (userLoaded && !isPremium && state === "form" && !autoJoining) {
     return (
       <div className="h-full bg-slate-950 text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
-        <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
+        <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-slate-950/95 backdrop-blur-sm sticky top-0 z-30">
           <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
           </button>
@@ -536,7 +548,7 @@ export default function ExamPage() {
 
   return (
     <div className="h-full bg-slate-950 text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
-      <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 glass-subtle sticky top-0 z-30">
+      <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-slate-950/95 backdrop-blur-sm sticky top-0 z-30">
         <button
           className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors"
           onClick={() => setLocation("/", { replace: true })}
@@ -815,7 +827,7 @@ export default function ExamPage() {
 
         {state === "running" && activeQuiz && (
           <div className="space-y-4 animate-in fade-in duration-300">
-            <div className="flex justify-between items-center p-4 glass rounded-xl border border-white/10 shadow-sm sticky top-16 z-20">
+            <div className="flex justify-between items-center p-4 bg-slate-900/95 backdrop-blur-sm rounded-xl border border-white/10 shadow-sm sticky top-16 z-20">
               <div>
                 <p className="text-sm font-medium">{activeQuiz.subject}</p>
                 <p className="text-xs text-slate-400 mt-0.5">{answeredCount} of {totalQuestions} answered</p>

@@ -34,6 +34,7 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
   const voiceBaseRef = useRef<string>("");
+  const finalTranscriptRef = useRef<string>("");
   const menuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
@@ -144,6 +145,8 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
 
     // Capture whatever the user already typed so voice is appended, not replaced.
     voiceBaseRef.current = input.trim();
+    // Reset accumulated final transcripts for this session.
+    finalTranscriptRef.current = "";
 
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
@@ -154,19 +157,23 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
     recognition.onstart = () => setIsListening(true);
 
     recognition.onresult = (event: any) => {
-      let finalTranscript = "";
-      let interimTranscript = "";
-      for (let i = 0; i < event.results.length; i++) {
-        const result = event.results[i];
-        if (result.isFinal) {
-          finalTranscript += result[0].transcript;
-        } else {
-          interimTranscript += result[0].transcript;
+      // Process only new results starting from resultIndex to avoid
+      // rebuilding the whole transcript from scratch on every event.
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalTranscriptRef.current += event.results[i][0].transcript;
         }
       }
-      const voiceText = (finalTranscript + interimTranscript).trim();
+      // Collect the current in-progress (non-final) interim result.
+      let interimTranscript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (!event.results[i].isFinal) {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
       const base = voiceBaseRef.current;
-      setInput(base + (base && voiceText ? " " : "") + voiceText);
+      const combined = (finalTranscriptRef.current + interimTranscript).trim();
+      setInput(base + (base && combined ? " " : "") + combined);
     };
 
     recognition.onerror = (event: any) => {
@@ -185,7 +192,18 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
       }
     };
 
-    recognition.onend = () => setIsListening(false);
+    recognition.onend = () => {
+      // Commit any transcribed text into the base so if recognition
+      // restarts (browser session end/resume), previously spoken words
+      // are preserved and not overwritten.
+      const base = voiceBaseRef.current;
+      const finalSoFar = finalTranscriptRef.current.trim();
+      if (finalSoFar) {
+        voiceBaseRef.current = (base + (base && finalSoFar ? " " : "") + finalSoFar).trim();
+        finalTranscriptRef.current = "";
+      }
+      setIsListening(false);
+    };
     recognition.start();
   };
 
