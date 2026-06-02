@@ -179,6 +179,34 @@
       0 8px 32px rgba(0,0,0,0.4),
       0 2px 8px rgba(99,102,241,0.08);
   }
+  /* Premium text gradient — indigo → violet → platinum */
+  .text-gradient-premium {
+    background: linear-gradient(135deg, #818cf8 0%, #c4b5fd 58%, #e9e4ff 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+  }
+  /* Premium progress fill — indigo → violet gradient with shimmer */
+  .progress-fill-premium {
+    background: linear-gradient(90deg, hsl(239 84% 67%) 0%, hsl(262 83% 70%) 100%);
+    position: relative;
+    overflow: hidden;
+  }
+  .progress-fill-premium::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,0.18) 50%, transparent 100%);
+    animation: progress-shimmer 2.2s ease-in-out infinite;
+  }
+  @keyframes progress-shimmer {
+    0%   { transform: translateX(-150%); }
+    100% { transform: translateX(250%); }
+  }
+  /* Premium ring — subtle violet glow outline for active/selected states */
+  .ring-premium {
+    box-shadow: 0 0 0 1px rgba(167,139,250,0.4), 0 0 12px rgba(99,102,241,0.15);
+  }
   /* Smooth mobile scroll */
   .scroll-touch {
     -webkit-overflow-scrolling: touch;

@@ -134,16 +134,23 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
     recognition.onstart = () => setIsListening(true);
 
     recognition.onresult = (event: any) => {
-      // Use processedIndexRef to guard against Chrome re-firing resultIndex=0
-      // on internal session resets — without it, final transcripts get double-added.
-      const startIdx = Math.max(event.resultIndex, processedIndexRef.current);
-      for (let i = startIdx; i < event.results.length; i++) {
+      // Commit newly finalized results IMMEDIATELY into voiceBaseRef.
+      // Starting from processedIndexRef (not event.resultIndex) so Chrome
+      // re-firing resultIndex=0 on internal resets cannot double-add finals.
+      for (let i = processedIndexRef.current; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
-          finalTranscriptRef.current += event.results[i][0].transcript;
+          const t = event.results[i][0].transcript.trim();
+          if (t) {
+            voiceBaseRef.current = voiceBaseRef.current
+              ? voiceBaseRef.current + " " + t
+              : t;
+          }
           processedIndexRef.current = i + 1;
         }
       }
-      // Collect current interim (non-final) text only from new events.
+      // Collect the current in-progress (interim) text from event.resultIndex forward.
+      // This is ONLY the unsettled suffix — it never overlaps with what was
+      // finalized above, eliminating the "How how how" doubling/tripling bug.
       let interimTranscript = "";
       for (let i = event.resultIndex; i < event.results.length; i++) {
         if (!event.results[i].isFinal) {
@@ -151,8 +158,8 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
         }
       }
       const base = voiceBaseRef.current;
-      const combined = (finalTranscriptRef.current + interimTranscript).trim();
-      setInput(base + (base && combined ? " " : "") + combined);
+      const live = interimTranscript.trim();
+      setInput(live ? (base ? base + " " + live : live) : base);
     };
 
     recognition.onerror = (event: any) => {
@@ -172,22 +179,15 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
     };
 
     recognition.onend = () => {
-      // Commit any accumulated final transcripts into voiceBaseRef so that
-      // when recognition auto-restarts (Chrome ends sessions every ~60s),
-      // previously spoken words survive the new session.
-      const base = voiceBaseRef.current;
-      const finalSoFar = finalTranscriptRef.current.trim();
-      if (finalSoFar) {
-        voiceBaseRef.current = (base + (base && finalSoFar ? " " : "") + finalSoFar).trim();
-        finalTranscriptRef.current = "";
-      }
-      // Reset processed-index guard for the new session.
+      // voiceBaseRef already contains all finalized text (committed inline in
+      // onresult), so nothing extra needs committing here.
+      finalTranscriptRef.current = "";
       processedIndexRef.current = 0;
 
       if (!manualStopRef.current) {
-        // Browser ended the session (silence timeout, network blip) — auto-restart
-        // so the user doesn't have to tap again. Create a fresh instance; calling
-        // .start() on an ended instance throws InvalidStateError in Chrome.
+        // Browser ended the session (silence timeout, network blip) — auto-restart.
+        // Always create a fresh instance; calling .start() on an ended instance
+        // throws InvalidStateError in Chrome.
         try {
           startRecognitionInstance(SpeechRecognition);
           recognitionRef.current.start();

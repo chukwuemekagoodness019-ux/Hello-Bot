@@ -91,7 +91,10 @@ router.post("/upload", sessionMiddleware, upload.single("file"), async (req, res
         return;
       }
 
-      contextNote = rawAnalysis;
+      const MAX_IMAGE_CONTEXT_CHARS = 4000;
+      contextNote = rawAnalysis.length > MAX_IMAGE_CONTEXT_CHARS
+        ? rawAnalysis.slice(0, MAX_IMAGE_CONTEXT_CHARS) + "\n\n[Analysis truncated — first portion shown]"
+        : rawAnalysis;
       summary = rawAnalysis;
 
     } else {

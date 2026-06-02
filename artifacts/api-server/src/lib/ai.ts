@@ -233,20 +233,31 @@ function classifyError(err: unknown): { reason: string; isQuota: boolean; isRate
   // 429 = rate limited (temporary); 402 / billing text = out of credits (account issue)
   const isRateLimited =
     status === 429 ||
-    lower.includes("rate limit") || lower.includes("ratelimit") || lower.includes("too many requests");
+    lower.includes("rate limit") || lower.includes("ratelimit") || lower.includes("too many requests") ||
+    lower.includes("overloaded") || lower.includes("overload");
   const isQuota =
     !isRateLimited && (
       status === 402 ||
       lower.includes("quota") || lower.includes("insufficient") ||
-      lower.includes("balance") || lower.includes("billing") || lower.includes("exceeded your current quota")
+      lower.includes("balance") || lower.includes("billing") ||
+      lower.includes("exceeded your current quota") ||
+      lower.includes("insufficient balance") ||    // DeepSeek
+      lower.includes("account has run out") ||     // OpenAI variant
+      lower.includes("out of credit") ||           // generic
+      lower.includes("payment required")
     );
-  // Auth errors: wrong key, expired key, unauthorized — distinct from transient outage
+  // Auth errors: wrong key, expired key, unauthorized — distinct from transient outage.
+  // Includes DeepSeek-specific messages ("Authentication Fails", "auth_subrequest_failed").
   const isAuthError =
     status === 401 ||
     (status === 400 && (lower.includes("key") || lower.includes("auth") || lower.includes("api_key"))) ||
     lower.includes("api_key_invalid") || lower.includes("invalid_api_key") ||
     lower.includes("key not valid") || lower.includes("not a valid api") ||
-    lower.includes("api key not valid") || lower.includes("invalid argument");
+    lower.includes("api key not valid") || lower.includes("invalid argument") ||
+    lower.includes("authentication fails") ||     // DeepSeek
+    lower.includes("authentication failed") ||    // DeepSeek variant
+    lower.includes("auth_subrequest_failed") ||   // DeepSeek proxy
+    lower.includes("invalid api key");
   let reason = "error";
   if (lower.includes("timed out") || lower.includes("timeout") || lower.includes("stall")) reason = "timeout";
   else if (isRateLimited) reason = "rate_limited";
@@ -294,6 +305,8 @@ export interface AiProviderHealth {
   status: AiProviderStatus;
   latency: number | null;
   role: "Primary" | "Fallback #1" | "Fallback #2" | "Fallback #3";
+  /** Raw error message from the last failed ping — for admin debugging. */
+  errorDetail?: string;
 }
 export interface AiStatusResult {
   openrouter: AiProviderHealth;
@@ -310,7 +323,7 @@ let cachedStatus: { at: number; data: AiStatusResult } | null = null;
 async function pingOne(
   available: boolean,
   call: () => Promise<unknown>,
-): Promise<{ status: AiProviderStatus; latency: number | null }> {
+): Promise<{ status: AiProviderStatus; latency: number | null; errorDetail?: string }> {
   if (!available) return { status: "Not Configured", latency: null };
   const start = Date.now();
   try {
@@ -318,10 +331,12 @@ async function pingOne(
     return { status: "Active", latency: Date.now() - start };
   } catch (err) {
     const { isRateLimited, isQuota, isAuthError } = classifyError(err);
-    if (isRateLimited) return { status: "Rate Limited", latency: null };
-    if (isQuota) return { status: "Out of Credits", latency: null };
-    if (isAuthError) return { status: "Invalid Key", latency: null };
-    return { status: "Unavailable", latency: null };
+    // Capture the raw error message so the admin dashboard can show exact failure reason.
+    const detail = (err instanceof Error ? err.message : String(err)).slice(0, 250);
+    if (isRateLimited) return { status: "Rate Limited", latency: null, errorDetail: detail };
+    if (isQuota) return { status: "Out of Credits", latency: null, errorDetail: detail };
+    if (isAuthError) return { status: "Invalid Key", latency: null, errorDetail: detail };
+    return { status: "Unavailable", latency: null, errorDetail: detail };
   }
 }
 
@@ -537,12 +552,11 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact s
   ]
 }`;
 
-  const quizMessages = [
-    { role: "system" as const, content: "You generate study quizzes as strict JSON." },
-    { role: "user" as const, content: userPrompt },
-  ];
+  type QuizMsg = { role: "system" | "user"; content: string };
 
-  const providers: Provider[] = [
+  // Build a fresh providers array for a given messages array.
+  // Called twice: once for the initial generation, once for the top-up pass.
+  const makeQuizProviders = (msgs: QuizMsg[]): Provider[] => [
     {
       name: "openrouter",
       available: !!process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY || !!process.env.OPENROUTER_API_KEY,
@@ -552,7 +566,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact s
           max_tokens: 8192,
           temperature: 0.4,
           response_format: { type: "json_object" },
-          messages: quizMessages,
+          messages: msgs,
         });
         return r.choices[0]?.message?.content ?? "";
       },
@@ -566,7 +580,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact s
           max_tokens: 8192,
           temperature: 0.4,
           response_format: { type: "json_object" },
-          messages: quizMessages,
+          messages: msgs,
         });
         return r.choices[0]?.message?.content ?? "";
       },
@@ -580,7 +594,7 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact s
           max_tokens: 8192,
           temperature: 0.4,
           response_format: { type: "json_object" },
-          messages: quizMessages,
+          messages: msgs,
         });
         return r.choices[0]?.message?.content ?? "";
       },
@@ -593,24 +607,69 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact s
           model: GROQ_CHAT_MODEL,
           max_tokens: 8192,
           temperature: 0.4,
-          messages: quizMessages,
+          messages: msgs,
         });
         return r.choices[0]?.message?.content ?? "";
       },
     },
   ];
 
-  const raw = await runChain("quiz", providers, 60_000);
-  if (raw === FALLBACK_MESSAGE) return [];
+  // Parse raw JSON from any provider response into valid question objects.
+  // Filters out malformed entries without throwing.
+  const parseQuizJson = (raw: string): Array<Omit<GeneratedQuestion, "id">> => {
+    if (!raw || raw === FALLBACK_MESSAGE) return [];
+    let p: { questions?: Array<Omit<GeneratedQuestion, "id">> };
+    try {
+      p = JSON.parse(raw);
+    } catch {
+      const m = raw.match(/\{[\s\S]*\}/);
+      try { p = m ? JSON.parse(m[0]) : { questions: [] }; }
+      catch { p = { questions: [] }; }
+    }
+    return (p.questions ?? []).filter((q) => q && q.prompt && q.correctAnswer);
+  };
 
-  let parsed: { questions?: Array<Omit<GeneratedQuestion, "id">> };
-  try {
-    parsed = JSON.parse(raw);
-  } catch {
-    const match = raw.match(/\{[\s\S]*\}/);
-    parsed = match ? JSON.parse(match[0]) : { questions: [] };
+  // ── Initial generation ──────────────────────────────────────────────────
+  const initialMessages: QuizMsg[] = [
+    { role: "system", content: "You generate study quizzes as strict JSON." },
+    { role: "user", content: userPrompt },
+  ];
+  const raw = await runChain("quiz", makeQuizProviders(initialMessages), 60_000);
+  let questions = parseQuizJson(raw);
+
+  // ── Top-up pass ─────────────────────────────────────────────────────────
+  // If the model returned fewer questions than requested, ask for exactly the
+  // missing count in one additional call.  One retry only — avoids runaway cost.
+  if (questions.length > 0 && questions.length < numQuestions) {
+    const missing = numQuestions - questions.length;
+    const topupPrompt = `Generate exactly ${missing} additional ${difficulty} ${questionType} questions on the subject: "${subject}" that are DIFFERENT from the ones already generated.${instructions ? ` Additional instructions: ${instructions}.` : ""}
+
+${typeInstructions}
+
+Each question must include a clear, one-sentence "explanation" of why the answer is correct.
+
+Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact shape:
+{
+  "questions": [
+    {
+      "prompt": "string",
+      "type": "${questionType}",
+      ${questionType === "objective" ? '"options": ["string","string","string","string"],' : ""}
+      "correctAnswer": "string",
+      "explanation": "string"
+    }
+  ]
+}`;
+    const topupMessages: QuizMsg[] = [
+      { role: "system", content: "You generate study quizzes as strict JSON." },
+      { role: "user", content: topupPrompt },
+    ];
+    const topupRaw = await runChain("quiz-topup", makeQuizProviders(topupMessages), 60_000);
+    const extra = parseQuizJson(topupRaw).slice(0, missing);
+    questions = [...questions, ...extra];
   }
-  return (parsed.questions ?? []).slice(0, numQuestions).map((q, i) => ({
+
+  return questions.slice(0, numQuestions).map((q, i) => ({
     id: `q${i + 1}`,
     prompt: q.prompt,
     type: questionType,

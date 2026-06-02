@@ -79,7 +79,7 @@ export function ChatSidebar({ onClose }: { onClose?: () => void }) {
                 </div>
                 <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
                   <div
-                    className="bg-primary h-full rounded-full transition-all duration-500 shadow-sm shadow-indigo-400/30"
+                    className="progress-fill-premium h-full rounded-full transition-all duration-500"
                     style={{ width: `${Math.min(100, (user.limits.messagesUsed / Math.max(1, user.limits.messagesLimit)) * 100)}%` }}
                   />
                 </div>
@@ -91,7 +91,7 @@ export function ChatSidebar({ onClose }: { onClose?: () => void }) {
                 </div>
                 <div className="w-full bg-white/5 h-1.5 rounded-full overflow-hidden">
                   <div
-                    className="bg-primary/60 h-full rounded-full transition-all duration-500"
+                    className="progress-fill-premium h-full rounded-full transition-all duration-500 opacity-70"
                     style={{ width: `${Math.min(100, (user.limits.quizzesUsed / Math.max(1, user.limits.quizzesLimit)) * 100)}%` }}
                   />
                 </div>
@@ -109,12 +109,12 @@ export function ChatSidebar({ onClose }: { onClose?: () => void }) {
         )}
 
         {user?.isPremium && (
-          <div className="p-4 glass border border-yellow-500/20 rounded-xl shadow-lg">
+          <div className="p-4 glass-premium border border-primary/25 rounded-xl shadow-lg ring-premium">
             <div className="flex items-center gap-2 mb-1">
-              <Crown className="w-5 h-5 text-yellow-400" />
-              <span className="font-bold text-yellow-400">Premium Active</span>
+              <Crown className="w-5 h-5 text-indigo-400" />
+              <span className="font-bold text-gradient-premium">Premium Active</span>
             </div>
-            <p className="text-xs text-slate-500 mt-2 leading-relaxed">Unlimited messages, quizzes, and voice enabled.</p>
+            <p className="text-xs text-slate-400 mt-2 leading-relaxed">Unlimited messages, quizzes, and voice enabled.</p>
           </div>
         )}
       </div>

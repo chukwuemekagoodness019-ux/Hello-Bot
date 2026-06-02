@@ -321,7 +321,7 @@ export default function QuizPage() {
           <div className="space-y-6 animate-in zoom-in-95 duration-500">
             <div className="text-center space-y-2 mb-8 glass border border-white/10 p-8 rounded-2xl shadow-sm">
               <h2 className="text-2xl font-bold">Quiz Complete</h2>
-              <div className={`text-6xl font-black my-4 ${quizResult.percent >= 50 ? "text-primary" : "text-destructive"}`}>
+              <div className={`text-6xl font-black my-4 ${quizResult.percent >= 80 ? "text-gradient-premium" : quizResult.percent >= 50 ? "text-primary" : "text-destructive"}`}>
                 {Math.round(quizResult.percent)}%
               </div>
               <p className="text-slate-400">{quizResult.score} out of {quizResult.total} correct</p>

@@ -8,8 +8,9 @@ Order: OpenRouter → OpenAI → DeepSeek → Groq (llama-3.3-70b-versatile).
 Groq uses OpenAI-compatible client at https://api.groq.com/openai/v1.
 CRITICAL: Render env var is `GROK_API_KEY` (not GROQ). Code must check: `process.env.GROQ_API_KEY || process.env.GROK_API_KEY`.
 classifyError() distinguishes: isRateLimited (HTTP 429) → "Rate Limited", isQuota (HTTP 402) → "Out of Credits", isAuthError (401) → "Invalid Key".
+DeepSeek-specific patterns added to classifyError: "authentication fails", "authentication failed", "auth_subrequest_failed" → isAuthError; "insufficient balance", "account has run out", "out of credit", "payment required" → isQuota; "overloaded", "overload" → isRateLimited.
 Admin Refresh button passes ?force=true to bypass 30s cache. getAiStatus(force) signature.
-AiStatusResult interface: openrouter, openai, deepseek, groq.
+AiStatusResult interface: openrouter, openai, deepseek, groq. AiProviderHealth.errorDetail?: string — raw error message for admin debugging (pingOne captures it).
 pingOne uses max_tokens:1 — can show "Active" even when credits exhausted for real calls (known limitation).
 tryProvider() fast-fails on isAuthError || isQuota || isRateLimited — skips retry loop so fallback chain reaches next provider immediately.
 
@@ -41,15 +42,18 @@ SQL migration: artifacts/api-server/migrations/001_persistent_store.sql — run 
 ## Quiz/Exam Generation
 generateQuiz() max_tokens MUST be 8192 (not 4096) — 50 questions with options/answers/explanations easily exceeds 4096 tokens and truncates JSON.
 Groq quiz generation omits `response_format: { type: "json_object" }` — llama-3.3-70b-versatile doesn't support it.
+TOP-UP PATTERN: generateQuiz() uses a local makeQuizProviders(msgs) helper (providers built per-messages-array) and parseQuizJson() helper. After the initial runChain("quiz"), if questions.length > 0 && questions.length < numQuestions, fires one additional runChain("quiz-topup") with a "generate exactly N MORE different questions" prompt. Max 1 top-up to avoid cost blow-up. Both calls use the same provider chain via makeQuizProviders.
+Image context cap: upload.ts caps image contextNote at 4000 chars (PDF uses 6000 chars).
 
 ## Voice Input (Complete Pattern)
 recognition.continuous = true — keeps recording until user presses stop.
 voiceBaseRef captures input.trim() at voice start — voice text appended, not replaced.
-finalTranscriptRef tracks accumulated final transcripts per session.
-processedIndexRef tracks which result indices have already been finalized — guards against Chrome re-firing resultIndex=0 on internal resets (double-adds without this guard).
+finalTranscriptRef: kept for cleanup in onend but NOT used in display (see bug below).
+processedIndexRef tracks which result indices have already been finalized — loops from processedIndexRef.current (NOT event.resultIndex) for final detection.
 manualStopRef: set to true in stopVoice() — distinguishes manual stops from browser-ended sessions.
-onresult loops from Math.max(event.resultIndex, processedIndexRef.current) for final transcripts; updates processedIndexRef.current = i+1.
-onend: commits finalTranscriptRef into voiceBaseRef, resets processedIndexRef. If !manualStopRef, creates a NEW recognition instance and calls .start() — never call .start() on an ended instance (throws InvalidStateError in Chrome).
+CRITICAL VOICE BUG FIX: DO NOT use `combined = finalTranscriptRef + interimTranscript` for display. Chrome's continuous-mode interimTranscript contains the FULL utterance so far (including already-finalized words), so combining both doubles/triples words ("How how how"). 
+CORRECT PATTERN: In onresult, commit finals IMMEDIATELY to voiceBaseRef (not finalTranscriptRef), then display = voiceBaseRef.current + " " + interimTranscript.trim() only. interimTranscript is truly only the unsettled suffix.
+onend: voiceBaseRef already has all finalized text, so just reset finalTranscriptRef and processedIndexRef. If !manualStopRef, create a NEW recognition instance and call .start() — never call .start() on an ended instance (throws InvalidStateError in Chrome).
 Auto-restart ensures the user doesn't have to tap mic again after Chrome's ~60s silence timeout.
 onerror: "no-speech" and "aborted" are silently ignored. "not-allowed" sets manualStopRef=true.
 
