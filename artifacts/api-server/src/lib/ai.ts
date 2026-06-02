@@ -316,7 +316,7 @@ export interface AiStatusResult {
   checkedAt: string;
 }
 
-const PING_TIMEOUT_MS = 5000;
+const PING_TIMEOUT_MS = 8000;
 const PING_CACHE_MS = 30_000;
 let cachedStatus: { at: number; data: AiStatusResult } | null = null;
 
@@ -637,10 +637,13 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact s
   const raw = await runChain("quiz", makeQuizProviders(initialMessages), 60_000);
   let questions = parseQuizJson(raw);
 
-  // ── Top-up pass ─────────────────────────────────────────────────────────
+  // ── Top-up loop ──────────────────────────────────────────────────────────
   // If the model returned fewer questions than requested, ask for exactly the
-  // missing count in one additional call.  One retry only — avoids runaway cost.
-  if (questions.length > 0 && questions.length < numQuestions) {
+  // missing count again.  Runs up to 2 additional passes to guarantee the
+  // requested count; breaks early if a pass returns nothing (provider failure).
+  let topupPass = 0;
+  while (questions.length > 0 && questions.length < numQuestions && topupPass < 2) {
+    topupPass++;
     const missing = numQuestions - questions.length;
     const topupPrompt = `Generate exactly ${missing} additional ${difficulty} ${questionType} questions on the subject: "${subject}" that are DIFFERENT from the ones already generated.${instructions ? ` Additional instructions: ${instructions}.` : ""}
 
@@ -664,8 +667,9 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact s
       { role: "system", content: "You generate study quizzes as strict JSON." },
       { role: "user", content: topupPrompt },
     ];
-    const topupRaw = await runChain("quiz-topup", makeQuizProviders(topupMessages), 60_000);
+    const topupRaw = await runChain(`quiz-topup-${topupPass}`, makeQuizProviders(topupMessages), 60_000);
     const extra = parseQuizJson(topupRaw).slice(0, missing);
+    if (!extra.length) break; // Provider returned nothing — stop to avoid runaway cost
     questions = [...questions, ...extra];
   }
 

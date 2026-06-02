@@ -37,6 +37,7 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
   const finalTranscriptRef = useRef<string>("");
   const processedIndexRef = useRef<number>(0);
   const manualStopRef = useRef<boolean>(false);
+  const sessionFreshRef = useRef<boolean>(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
@@ -141,11 +142,20 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
         if (event.results[i].isFinal) {
           const t = event.results[i][0].transcript.trim();
           if (t) {
-            voiceBaseRef.current = voiceBaseRef.current
-              ? voiceBaseRef.current + " " + t
-              : t;
+            const base = voiceBaseRef.current;
+            // Restart-echo guard: Chrome sometimes fires the last phrase of the
+            // previous session as the very first final result of a new session.
+            // Skip it if voiceBase already ends with that exact text.
+            const isRestartEcho =
+              sessionFreshRef.current &&
+              base.length > 0 &&
+              base.toLowerCase().endsWith(t.toLowerCase());
+            if (!isRestartEcho) {
+              voiceBaseRef.current = base ? base + " " + t : t;
+            }
           }
           processedIndexRef.current = i + 1;
+          sessionFreshRef.current = false; // First result committed — no longer fresh session
         }
       }
       // Collect the current in-progress (interim) text from event.resultIndex forward.
@@ -188,6 +198,9 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
         // Browser ended the session (silence timeout, network blip) — auto-restart.
         // Always create a fresh instance; calling .start() on an ended instance
         // throws InvalidStateError in Chrome.
+        // Mark session as fresh so the restart-echo guard activates for the
+        // first result of the new session.
+        sessionFreshRef.current = true;
         try {
           startRecognitionInstance(SpeechRecognition);
           recognitionRef.current.start();
