@@ -130,6 +130,10 @@ interface ChatHistoryCtx {
   addMessage: (message: ChatMessage, targetId?: string) => string;
   updateLastMessage: (message: ChatMessage, targetId?: string) => void;
   getCurrentIdRef: () => string | null;
+  /** Replace older chat messages with an AI-generated summary, keeping the
+   *  most recent `keepRecent` user/assistant messages verbatim.
+   *  FILE_CONTEXT system messages are always preserved unchanged. */
+  compressConversation: (convId: string, summary: string, keepRecent: number) => void;
 }
 
 const ChatHistoryContext = createContext<ChatHistoryCtx | null>(null);
@@ -218,6 +222,53 @@ export function ChatHistoryProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
+  // -------------------------------------------------------------------------
+  // Rolling summarization — replaces older chat messages with a compact
+  // [CONVERSATION_SUMMARY] system message while preserving:
+  //   1. All [FILE_CONTEXT...] system messages (uploaded PDFs / images)
+  //   2. The last `keepRecent` user/assistant messages verbatim
+  // Uses setConversations(prev => ...) so it always sees the latest state
+  // even when called from an async context after a stream finishes.
+  // -------------------------------------------------------------------------
+  const compressConversation = useCallback(
+    (convId: string, summary: string, keepRecent: number) => {
+      if (!summary) return;
+      setConversations((prev) =>
+        prev.map((conv) => {
+          if (conv.id !== convId) return conv;
+
+          // Preserve file-context system messages verbatim — never summarise them.
+          const fileCtxMsgs = conv.messages.filter(
+            (m) => m.role === "system" && m.content.startsWith("[FILE_CONTEXT"),
+          );
+
+          // Chat messages: user + assistant + any prior CONVERSATION_SUMMARY.
+          // We drop the old summary (replaced by the new one below).
+          const chatMsgs = conv.messages.filter(
+            (m) =>
+              m.role !== "system" ||
+              (!m.content.startsWith("[FILE_CONTEXT") &&
+                !m.content.startsWith("[CONVERSATION_SUMMARY]")),
+          );
+
+          // Keep the most recent `keepRecent` chat messages verbatim.
+          const recentMsgs = chatMsgs.slice(-keepRecent);
+
+          const summaryMsg: ChatMessage = {
+            role: "system",
+            content: `[CONVERSATION_SUMMARY]\n${summary}`,
+          };
+
+          return {
+            ...conv,
+            messages: [...fileCtxMsgs, summaryMsg, ...recentMsgs],
+          };
+        }),
+      );
+    },
+    [],
+  );
+
   return (
     <ChatHistoryContext.Provider
       value={{
@@ -229,6 +280,7 @@ export function ChatHistoryProvider({ children }: { children: ReactNode }) {
         addMessage,
         updateLastMessage,
         getCurrentIdRef,
+        compressConversation,
       }}
     >
       {children}

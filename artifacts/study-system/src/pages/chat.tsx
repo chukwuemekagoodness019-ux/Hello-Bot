@@ -21,7 +21,7 @@ const BASE = import.meta.env.BASE_URL as string;
 export default function ChatPage() {
   const { data: user, refetch: refetchUser } = useGetMe();
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { currentConversation, addMessage, startNewChat, getCurrentIdRef } =
+  const { currentConversation, addMessage, startNewChat, getCurrentIdRef, compressConversation } =
     useChatHistory();
   const paymentModal = usePaymentModal();
   const [, setLocation] = useLocation();
@@ -37,6 +37,8 @@ export default function ChatPage() {
   const [streamingConvId, setStreamingConvId] = useState<string | null>(null);
   const isStreamingRef = useRef(false);
   const abortRef = useRef<AbortController | null>(null);
+  // Rolling summarization: don't run two summarisations at once.
+  const summaryInProgressRef = useRef(false);
 
   // -------------------------------------------------------------------------
   // Core streaming fetch — calls /api/chat/stream, updates streamingContent.
@@ -177,14 +179,72 @@ export default function ChatPage() {
   };
 
   // -------------------------------------------------------------------------
-  // Send a text message
+  // Rolling summarization constants.
+  // Trigger when a conversation accumulates ≥30 non-system messages (15 turns).
+  // Keep the last 10 messages verbatim; summarise everything older.
   // -------------------------------------------------------------------------
-  const handleSend = (content: string, usedVoice = false) => {
+  const SUMMARY_THRESHOLD = 30;
+  const KEEP_RECENT = 10;
+
+  // Fires in the background after each AI response. Uses the snapshot of
+  // `preMessages` taken at the start of handleSend so we don't need to
+  // re-read state (which may still be stale in a closure). The actual
+  // compress call uses setConversations(prev => …) inside the context so it
+  // always operates on the very latest state regardless of stale closures.
+  const triggerSummarize = useCallback(
+    async (convId: string, preMessages: ChatMessage[]) => {
+      // +2 for the user message and AI response just added.
+      const chatCount =
+        preMessages.filter((m) => m.role !== "system").length + 2;
+      if (chatCount < SUMMARY_THRESHOLD) return;
+      if (summaryInProgressRef.current) return;
+
+      // Identify the older chat messages (from the pre-exchange snapshot)
+      // that should be compressed. We keep KEEP_RECENT - 2 from preMessages
+      // (the remaining 2 slots are filled by the user+assistant just added).
+      const chatMsgs = preMessages.filter(
+        (m) =>
+          m.role !== "system" &&
+          !m.content.startsWith("[CONVERSATION_SUMMARY]"),
+      );
+      const keepFromPre = Math.max(0, KEEP_RECENT - 2);
+      const compressCount = chatMsgs.length - keepFromPre;
+      if (compressCount <= 0) return;
+
+      const msgsToCompress = chatMsgs.slice(0, compressCount);
+      summaryInProgressRef.current = true;
+      try {
+        const res = await fetch(`${BASE}api/chat/summarize`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ messages: msgsToCompress }),
+          credentials: "include",
+        });
+        if (!res.ok) return;
+        const data = (await res.json()) as { summary?: string };
+        if (data.summary) {
+          compressConversation(convId, data.summary, KEEP_RECENT);
+        }
+      } catch {
+        // Non-critical — silently swallow. The full history is still intact.
+      } finally {
+        summaryInProgressRef.current = false;
+      }
+    },
+    [compressConversation],
+  );
+
+  // -------------------------------------------------------------------------
+  // Send a text message — async so we can await the stream and then check
+  // whether the conversation needs background summarization.
+  // -------------------------------------------------------------------------
+  const handleSend = async (content: string, usedVoice = false) => {
     const userMsg: ChatMessage = { role: "user", content };
     const preMessages = currentConversation?.messages ?? [];
     const convId = addMessage(userMsg);
     setLocalError(null);
-    void streamChat(buildHistory(preMessages, userMsg), convId, usedVoice);
+    await streamChat(buildHistory(preMessages, userMsg), convId, usedVoice);
+    void triggerSummarize(convId, preMessages);
   };
 
   // -------------------------------------------------------------------------

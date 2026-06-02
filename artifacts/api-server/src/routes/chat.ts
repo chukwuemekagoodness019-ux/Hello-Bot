@@ -2,7 +2,8 @@ import { Router, type IRouter } from "express";
 import { sessionMiddleware, isPremiumActive, LIMITS } from "../lib/session";
 import { updateUser } from "../lib/db-users";
 import { SendChatBody } from "@workspace/api-zod";
-import { chatComplete, chatCompleteStream, STREAM_FALLBACK, FALLBACK_MESSAGE } from "../lib/ai";
+import { chatComplete, chatCompleteStream, summarizeConversation, STREAM_FALLBACK, FALLBACK_MESSAGE } from "../lib/ai";
+import type { ChatMessage } from "../lib/ai";
 
 const router: IRouter = Router();
 
@@ -132,6 +133,37 @@ router.post("/chat/stream", sessionMiddleware, async (req, res, next) => {
       res.write(`data: [DONE]\n\n`);
       res.end();
     }
+  }
+});
+
+// ---------------------------------------------------------------------------
+// Summarize — infrastructure endpoint used by the frontend to compress long
+// conversation history into a compact bullet-point system message.
+// Does NOT increment message/voice counters — it is transparent infrastructure.
+// Auth is still required so anonymous clients cannot use compute for free.
+// ---------------------------------------------------------------------------
+router.post("/chat/summarize", sessionMiddleware, async (req, res, next) => {
+  try {
+    const body = req.body as { messages?: unknown };
+    if (!Array.isArray(body.messages)) {
+      res.status(400).json({ error: "messages must be an array" });
+      return;
+    }
+    const messages = (body.messages as ChatMessage[]).filter(
+      (m) =>
+        m &&
+        typeof m === "object" &&
+        (m.role === "user" || m.role === "assistant") &&
+        typeof m.content === "string",
+    );
+    if (!messages.length) {
+      res.json({ summary: "" });
+      return;
+    }
+    const summary = await summarizeConversation(messages);
+    res.json({ summary });
+  } catch (err) {
+    next(err);
   }
 });
 

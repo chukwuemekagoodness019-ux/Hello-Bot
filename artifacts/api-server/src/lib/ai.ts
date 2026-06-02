@@ -621,6 +621,71 @@ Respond with ONLY valid JSON (no markdown fences, no commentary) in this exact s
 }
 
 // ---------------------------------------------------------------------------
+// Conversation summarizer — compresses older chat turns into a compact
+// bullet-point summary for session memory continuity.
+//
+// Used by the /chat/summarize route. Groq is tried first (lowest latency),
+// then OpenRouter. Never increments the message counter — this is infrastructure.
+// ---------------------------------------------------------------------------
+export async function summarizeConversation(messages: ChatMessage[]): Promise<string> {
+  if (!messages.length) return "";
+
+  // Truncate individual messages so the summarizer prompt stays compact.
+  const transcript = messages
+    .filter((m) => m.role !== "system")
+    .map((m) => `${m.role === "user" ? "Student" : "AI"}: ${m.content.slice(0, 600)}`)
+    .join("\n\n");
+
+  const summaryMessages = [
+    {
+      role: "system" as const,
+      content:
+        "You summarize study conversations compactly so a future AI session can maintain continuity. Output ONLY the summary — no preamble, no explanation.",
+    },
+    {
+      role: "user" as const,
+      content: `Summarize this study session in 4–6 concise bullet points. Include: topics discussed, key concepts explained, student questions and confusion points, the student's apparent knowledge level, and any important facts stated. Be specific.\n\nConversation:\n${transcript}`,
+    },
+  ];
+
+  const orAvail =
+    !!process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY || !!process.env.OPENROUTER_API_KEY;
+
+  // Groq first (fastest inference for short tasks), OpenRouter as fallback.
+  const providers: Provider[] = [
+    {
+      name: "groq",
+      available: !!groq,
+      call: async () => {
+        const r = await groq!.chat.completions.create({
+          model: GROQ_CHAT_MODEL,
+          max_tokens: 400,
+          temperature: 0.3,
+          messages: summaryMessages,
+        });
+        return r.choices[0]?.message?.content ?? "";
+      },
+    },
+    {
+      name: "openrouter",
+      available: orAvail,
+      call: async () => {
+        const r = await openrouter.chat.completions.create({
+          model: OPENROUTER_CHAT_MODEL,
+          max_tokens: 400,
+          temperature: 0.3,
+          messages: summaryMessages,
+        });
+        return r.choices[0]?.message?.content ?? "";
+      },
+    },
+  ];
+
+  const result = await runChain("summarize", providers, 15_000);
+  return result === FALLBACK_MESSAGE ? "" : result;
+}
+
+// ---------------------------------------------------------------------------
 // Streaming chat — iterates SSE chunks from the first available provider.
 // onChunk is called for every text delta as it arrives.
 // Returns the full assembled reply string.

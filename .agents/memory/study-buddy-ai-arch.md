@@ -80,6 +80,13 @@ ai-prose pre: overflow-x:auto max-width:100% word-break:normal white-space:pre.
 ai-prose table: display:block overflow-x:auto.
 The outer flex column must have min-w-0 to prevent flex overflow.
 
+## Rolling Conversation Summarization (Session Memory)
+Trigger: after each AI response in handleSend(), when conversation (pre-exchange snapshot) has ≥30 non-system chat messages (SUMMARY_THRESHOLD=30). Keeps last 10 verbatim (KEEP_RECENT=10).
+Backend: POST /api/chat/summarize — sessionMiddleware required, does NOT increment message/voice counters. Accepts {messages: ChatMessage[]}, returns {summary: string}. Uses summarizeConversation() in ai.ts (Groq first → OpenRouter, max_tokens=400, temperature=0.3).
+Frontend trigger (triggerSummarize): fires background fetch after await streamChat() in handleSend. Uses preMessages snapshot taken before the exchange so no stale-closure issue. compressConversation() in context uses setConversations(prev=>...) so always sees latest state.
+compressConversation(): preserves [FILE_CONTEXT...] system messages verbatim, replaces old summary + older chat msgs with new [CONVERSATION_SUMMARY] system message + last KEEP_RECENT chat msgs. buildOpenAIMessages() already merges all system messages into the system prompt — summary lands in highest-priority position automatically.
+summaryInProgressRef prevents concurrent summarisation calls.
+
 ## TypeScript Environment Note
 The monorepo lib packages (api-client-react, api-zod, integrations-openrouter-ai) export directly from src — no dist step. This produces pre-existing TS6305 errors in typecheck but does NOT affect builds (esbuild for API, Vite for frontend both resolve correctly). Do not attempt to "fix" these — they are intentional design.
 
