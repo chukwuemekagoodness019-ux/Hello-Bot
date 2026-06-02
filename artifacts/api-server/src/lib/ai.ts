@@ -216,6 +216,10 @@ async function tryProvider(p: Provider, timeoutMs: number): Promise<{ ok: true; 
       lastError = new Error(`${p.name} returned empty`);
     } catch (err) {
       lastError = err;
+      // Auth errors, quota exhaustion, and rate limits are definitive — skip retry
+      // so the fallback chain reaches the next provider as fast as possible.
+      const { isAuthError, isQuota, isRateLimited } = classifyError(err);
+      if (isAuthError || isQuota || isRateLimited) break;
     }
   }
   return { ok: false, error: lastError };
@@ -347,15 +351,25 @@ export async function getAiStatus(force = false): Promise<AiStatusResult> {
 }
 
 function buildOpenAIMessages(messages: ChatMessage[]) {
+  // Merge [FILE_CONTEXT] system messages into the main system prompt so the AI
+  // receives file content in the highest-priority position and follow-up questions
+  // are always answered using that context. Keeping them as separate user turns
+  // created consecutive user messages which confused some models.
+  const contextMessages = messages.filter((m) => m.role === "system");
+  const conversationMessages = messages.filter((m) => m.role !== "system");
+
+  let systemContent = buildSystemPrompt();
+  if (contextMessages.length > 0) {
+    systemContent +=
+      "\n\n---\n**Uploaded File Context (use this for ALL follow-up questions):**\n\n" +
+      contextMessages.map((m) => m.content).join("\n\n---\n\n");
+  }
+
   const result: { role: "system" | "user" | "assistant"; content: string }[] = [
-    { role: "system", content: buildSystemPrompt() },
+    { role: "system", content: systemContent },
   ];
-  for (const m of messages) {
-    if (m.role === "system") {
-      result.push({ role: "user", content: m.content });
-    } else {
-      result.push({ role: m.role as "user" | "assistant", content: m.content });
-    }
+  for (const m of conversationMessages) {
+    result.push({ role: m.role as "user" | "assistant", content: m.content });
   }
   return result;
 }

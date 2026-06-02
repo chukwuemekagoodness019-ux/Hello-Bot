@@ -161,19 +161,19 @@ export function MessageList({
       {messages.map((msg, idx) => (
         <div
           key={idx}
-          className={`flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300 ${
+          className={`flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300 min-w-0 ${
             msg.role === "user" ? "items-end" : "items-start"
           }`}
         >
           <div
-            className={`max-w-[88%] px-4 py-3 rounded-2xl ${
+            className={`max-w-[88%] min-w-0 overflow-hidden px-4 py-3 rounded-2xl ${
               msg.role === "user"
-                ? "bg-gradient-to-br from-indigo-600 to-indigo-700 text-white rounded-br-sm shadow-lg shadow-indigo-900/30"
-                : "glass border border-white/8 rounded-bl-sm shadow-xl"
+                ? "bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-700 text-white rounded-br-sm shadow-lg shadow-indigo-900/40 ring-1 ring-white/10"
+                : "glass-premium border border-white/10 rounded-bl-sm shadow-xl shadow-black/40"
             }`}
           >
             {msg.role === "user" ? (
-              <div className="whitespace-pre-wrap text-sm leading-relaxed text-white">
+              <div className="whitespace-pre-wrap text-sm leading-relaxed text-white break-words [overflow-wrap:anywhere]">
                 {msg.content}
               </div>
             ) : (
@@ -209,8 +209,8 @@ export function MessageList({
 
       {/* Live streaming message */}
       {streamingMessage !== undefined && streamingMessage.length > 0 && (
-        <div className="flex flex-col items-start animate-in fade-in duration-200">
-          <div className="max-w-[88%] px-4 py-3 rounded-2xl glass border border-white/8 rounded-bl-sm shadow-xl">
+        <div className="flex flex-col items-start animate-in fade-in duration-200 min-w-0">
+          <div className="max-w-[88%] min-w-0 overflow-hidden px-4 py-3 rounded-2xl glass-premium border border-white/10 rounded-bl-sm shadow-xl shadow-black/40">
             <MarkdownContent content={streamingMessage} />
             <span className="inline-block w-0.5 h-4 bg-primary/70 ml-0.5 animate-pulse align-text-bottom" />
           </div>
@@ -220,7 +220,7 @@ export function MessageList({
       {/* File upload / OCR processing indicator */}
       {isUploading && (
         <div className="flex items-start animate-in fade-in duration-200">
-          <div className="glass border border-primary/30 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-3 shadow-xl">
+          <div className="glass border border-primary/20 bg-primary/5 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-3 shadow-xl shadow-indigo-900/20">
             <div className="flex gap-1 items-center">
               <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
               <span className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce" style={{ animationDelay: "160ms" }} />
@@ -236,9 +236,9 @@ export function MessageList({
         <div className="flex items-start animate-in fade-in duration-200">
           <div className="glass border border-white/8 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-3 shadow-xl">
             <div className="flex gap-1 items-center">
-              <span className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce" style={{ animationDelay: "160ms" }} />
-              <span className="w-1.5 h-1.5 bg-primary/70 rounded-full animate-bounce" style={{ animationDelay: "320ms" }} />
+              <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "160ms" }} />
+              <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "320ms" }} />
             </div>
             <span className="italic text-xs text-slate-400">AI is thinking…</span>
           </div>

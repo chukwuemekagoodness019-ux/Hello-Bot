@@ -11,10 +11,14 @@ classifyError() distinguishes: isRateLimited (HTTP 429) → "Rate Limited", isQu
 Admin Refresh button passes ?force=true to bypass 30s cache. getAiStatus(force) signature.
 AiStatusResult interface: openrouter, openai, deepseek, groq.
 pingOne uses max_tokens:1 — can show "Active" even when credits exhausted for real calls (known limitation).
+tryProvider() fast-fails on isAuthError || isQuota || isRateLimited — skips retry loop so fallback chain reaches next provider immediately.
 
-## System Prompt
-buildSystemPrompt() wraps SYSTEM_PROMPT_BASE with a live date header computed at call time via `new Date().toLocaleDateString("en-NG", ...)`. buildOpenAIMessages() calls buildSystemPrompt() on every request — date is always fresh, never stale.
-Global understanding-check rule: after any substantive explanation, AI closes with mini-question, quiz nudge, or offer to simplify — rotated each response.
+## System Prompt & File Context
+buildSystemPrompt() wraps SYSTEM_PROMPT_BASE with a live date header.
+buildOpenAIMessages() merges all [FILE_CONTEXT] system messages from the conversation INTO the system prompt (not as separate user turns). Previous design put them as user-role messages creating consecutive user messages that confused models. Correct pattern:
+  systemContent = buildSystemPrompt() + "\n\n---\n**Uploaded File Context**\n\n" + contextMessages.map(m => m.content).join(...)
+  Then conversationMessages (user/assistant only) follow in order.
+This ensures PDF and image context always reaches the AI at highest priority for ALL follow-up questions.
 
 ## Auth
 HMAC-SHA256 signed session cookies. SESSION_SECRET env var (defaults to dev string — must be set in Render prod). secure: only in production. sameSite: lax.
@@ -37,22 +41,17 @@ SQL migration: artifacts/api-server/migrations/001_persistent_store.sql — run 
 ## Quiz/Exam Generation
 generateQuiz() max_tokens MUST be 8192 (not 4096) — 50 questions with options/answers/explanations easily exceeds 4096 tokens and truncates JSON.
 Groq quiz generation omits `response_format: { type: "json_object" }` — llama-3.3-70b-versatile doesn't support it.
-Exam generation appends "Create a formal exam with exactly N questions" to instructions field.
 
-## Voice Input
+## Voice Input (Complete Pattern)
 recognition.continuous = true — keeps recording until user presses stop.
-voiceBaseRef captures input.trim() at voice start — voice text is appended, not replaced.
+voiceBaseRef captures input.trim() at voice start — voice text appended, not replaced.
 finalTranscriptRef tracks accumulated final transcripts per session.
-onresult iterates from event.resultIndex (NOT i=0) — avoids rebuilding full transcript from scratch every event.
-onend commits finalTranscriptRef into voiceBaseRef — so browser session restarts don't lose previously spoken words.
-onerror: no-speech silently ignored. not-allowed stops and toasts.
-
-## Anti-Cheat (exam.tsx)
-hasSubmittedRef = useRef(false) — must be used as the guard in doSubmit(), NOT the hasSubmitted state value (stale closure).
-All reset paths (handleGenerate, handleJoinExam, error catches) must sync BOTH hasSubmittedRef.current AND setHasSubmitted.
-doSubmit() must NOT be called inside a React state updater function — use setTimeout(() => doSubmit(), 0) instead.
-409 ALREADY_SUBMITTED: navigate to "form" state, do NOT revert to "running".
-Other 409 codes (attempt limit exceeded): show error + revert is correct.
+processedIndexRef tracks which result indices have already been finalized — guards against Chrome re-firing resultIndex=0 on internal resets (double-adds without this guard).
+manualStopRef: set to true in stopVoice() — distinguishes manual stops from browser-ended sessions.
+onresult loops from Math.max(event.resultIndex, processedIndexRef.current) for final transcripts; updates processedIndexRef.current = i+1.
+onend: commits finalTranscriptRef into voiceBaseRef, resets processedIndexRef. If !manualStopRef, creates a NEW recognition instance and calls .start() — never call .start() on an ended instance (throws InvalidStateError in Chrome).
+Auto-restart ensures the user doesn't have to tap mic again after Chrome's ~60s silence timeout.
+onerror: "no-speech" and "aborted" are silently ignored. "not-allowed" sets manualStopRef=true.
 
 ## PDF Upload
 pdf-parse version: use 1.1.1 (NOT ^2.x — breaks on Node.js v24).
@@ -63,10 +62,26 @@ Image-based PDF OCR fallback uses mimeType:"image/jpeg" NOT "application/pdf".
 ## UI Layout Architecture
 viewport-fit=cover in index.html. App wrapper: `h-[100dvh] overflow-hidden flex flex-col`.
 Safe-area CSS: .nav-safe, .input-bar-bottom, .pb-nav-safe in index.css.
-Critical Tailwind pitfall: shorthand `p-N sm:p-M` overrides `pb-X` at sm — always split into px/pt/pb.
 Sticky headers/fixed navbars: MUST use `bg-slate-950/95 backdrop-blur-sm` (NOT glass-subtle which is only 2.5% opacity).
-Sticky in-exam progress bar uses `bg-slate-900/95 backdrop-blur-sm` (slightly elevated surface).
+Sticky in-exam progress bar uses `bg-slate-900/95 backdrop-blur-sm`.
 The bottom "Submit Exam" bar uses bg-background (solid) — correct.
+
+## Glassmorphism Design System
+.glass = gradient 7%→4% + blur(24px) saturate(1.4) + inset border shadows — richer than flat rgba.
+.glass-sm = gradient 5%→3% + blur(16px) saturate(1.3).
+.glass-subtle = flat rgba(255,255,255,0.025) — used only for non-scrolling backgrounds (NOT sticky bars).
+.glass-premium = indigo-tinted gradient + blur(32px) saturate(1.6) — for AI message bubbles and key cards.
+AI message bubbles use glass-premium + border-white/10. User bubbles use indigo-500→violet-700 gradient + ring-1 ring-white/10.
+
+## Chat Bubble Overflow Prevention
+Bubble containers MUST have: max-w-[88%] min-w-0 overflow-hidden.
+User message text MUST have: break-words [overflow-wrap:anywhere].
+ai-prose pre: overflow-x:auto max-width:100% word-break:normal white-space:pre.
+ai-prose table: display:block overflow-x:auto.
+The outer flex column must have min-w-0 to prevent flex overflow.
+
+## TypeScript Environment Note
+The monorepo lib packages (api-client-react, api-zod, integrations-openrouter-ai) export directly from src — no dist step. This produces pre-existing TS6305 errors in typecheck but does NOT affect builds (esbuild for API, Vite for frontend both resolve correctly). Do not attempt to "fix" these — they are intentional design.
 
 ## Free Limits
 messages: free=25 + grace=2 = 27; quizzes: free=2; voice: free=5.
@@ -77,9 +92,5 @@ WEEKLY_PREMIUM_PRICE, MONTHLY_PREMIUM_PRICE — set in Render env to override de
 ## PWA Hook Architecture
 usePwaInstall() must be called ONCE per component tree. PwaInstallButton accepts props from parent hook instance.
 
-## Key Bug Fixes History
-- Phase A: classifyError isAuthError → "Invalid Key" AiProviderStatus
-- Phase B (BUG-B01): exam.tsx handleJoinExam setEnableTimer(hasTimer) — untimed exams showed 0:00
-- 7-phase production stabilisation (session 2)
-- 12-phase final hardening pass (session 3)
-- Confirmed issues A–G fixed (session 4): GROK alias, quiz max_tokens, transparent bars, pdf-parse v1, anti-cheat ref guard, voice resultIndex fix
+## PDF OCR Fallback MIME Bug
+upload.ts: image-based PDF visionAnalyze OCR fallback must use mimeType:"image/jpeg" NOT "application/pdf".

@@ -35,6 +35,8 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
   const recognitionRef = useRef<any>(null);
   const voiceBaseRef = useRef<string>("");
   const finalTranscriptRef = useRef<string>("");
+  const processedIndexRef = useRef<number>(0);
+  const manualStopRef = useRef<boolean>(false);
   const menuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
@@ -116,9 +118,88 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
   const removePendingFile = () => setPendingFile(null);
 
   const stopVoice = () => {
+    manualStopRef.current = true;
     recognitionRef.current?.stop();
-    recognitionRef.current?.abort();
+    recognitionRef.current = null;
     setIsListening(false);
+  };
+
+  const startRecognitionInstance = (SpeechRecognition: any) => {
+    const recognition = new SpeechRecognition();
+    recognitionRef.current = recognition;
+    recognition.continuous = true;
+    recognition.interimResults = true;
+    recognition.lang = "en-NG";
+
+    recognition.onstart = () => setIsListening(true);
+
+    recognition.onresult = (event: any) => {
+      // Use processedIndexRef to guard against Chrome re-firing resultIndex=0
+      // on internal session resets — without it, final transcripts get double-added.
+      const startIdx = Math.max(event.resultIndex, processedIndexRef.current);
+      for (let i = startIdx; i < event.results.length; i++) {
+        if (event.results[i].isFinal) {
+          finalTranscriptRef.current += event.results[i][0].transcript;
+          processedIndexRef.current = i + 1;
+        }
+      }
+      // Collect current interim (non-final) text only from new events.
+      let interimTranscript = "";
+      for (let i = event.resultIndex; i < event.results.length; i++) {
+        if (!event.results[i].isFinal) {
+          interimTranscript += event.results[i][0].transcript;
+        }
+      }
+      const base = voiceBaseRef.current;
+      const combined = (finalTranscriptRef.current + interimTranscript).trim();
+      setInput(base + (base && combined ? " " : "") + combined);
+    };
+
+    recognition.onerror = (event: any) => {
+      if (event.error === "not-allowed") {
+        manualStopRef.current = true;
+        setIsListening(false);
+        toast({
+          title: "Microphone permission denied.",
+          description: "Allow microphone access in your browser settings.",
+          variant: "destructive",
+        });
+      } else if (event.error === "no-speech" || event.error === "aborted") {
+        // Pause or manual abort — do not toast or stop the listening UI.
+      } else {
+        // Network or audio-capture errors — do not stop UI; let onend restart.
+      }
+    };
+
+    recognition.onend = () => {
+      // Commit any accumulated final transcripts into voiceBaseRef so that
+      // when recognition auto-restarts (Chrome ends sessions every ~60s),
+      // previously spoken words survive the new session.
+      const base = voiceBaseRef.current;
+      const finalSoFar = finalTranscriptRef.current.trim();
+      if (finalSoFar) {
+        voiceBaseRef.current = (base + (base && finalSoFar ? " " : "") + finalSoFar).trim();
+        finalTranscriptRef.current = "";
+      }
+      // Reset processed-index guard for the new session.
+      processedIndexRef.current = 0;
+
+      if (!manualStopRef.current) {
+        // Browser ended the session (silence timeout, network blip) — auto-restart
+        // so the user doesn't have to tap again. Create a fresh instance; calling
+        // .start() on an ended instance throws InvalidStateError in Chrome.
+        try {
+          startRecognitionInstance(SpeechRecognition);
+          recognitionRef.current.start();
+        } catch {
+          setIsListening(false);
+        }
+      } else {
+        setIsListening(false);
+      }
+    };
+
+    return recognition;
   };
 
   const startVoice = () => {
@@ -145,65 +226,12 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
 
     // Capture whatever the user already typed so voice is appended, not replaced.
     voiceBaseRef.current = input.trim();
-    // Reset accumulated final transcripts for this session.
+    // Reset all session state.
     finalTranscriptRef.current = "";
+    processedIndexRef.current = 0;
+    manualStopRef.current = false;
 
-    const recognition = new SpeechRecognition();
-    recognitionRef.current = recognition;
-    recognition.continuous = true;
-    recognition.interimResults = true;
-    recognition.lang = "en-NG";
-
-    recognition.onstart = () => setIsListening(true);
-
-    recognition.onresult = (event: any) => {
-      // Process only new results starting from resultIndex to avoid
-      // rebuilding the whole transcript from scratch on every event.
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (event.results[i].isFinal) {
-          finalTranscriptRef.current += event.results[i][0].transcript;
-        }
-      }
-      // Collect the current in-progress (non-final) interim result.
-      let interimTranscript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        if (!event.results[i].isFinal) {
-          interimTranscript += event.results[i][0].transcript;
-        }
-      }
-      const base = voiceBaseRef.current;
-      const combined = (finalTranscriptRef.current + interimTranscript).trim();
-      setInput(base + (base && combined ? " " : "") + combined);
-    };
-
-    recognition.onerror = (event: any) => {
-      if (event.error === "not-allowed") {
-        setIsListening(false);
-        toast({
-          title: "Microphone permission denied.",
-          description: "Allow microphone access in your browser settings.",
-          variant: "destructive",
-        });
-      } else if (event.error === "no-speech") {
-        // User paused — keep listening, do not toast or stop.
-      } else if (event.error !== "aborted") {
-        setIsListening(false);
-        toast({ title: "Didn't catch that. Please try again." });
-      }
-    };
-
-    recognition.onend = () => {
-      // Commit any transcribed text into the base so if recognition
-      // restarts (browser session end/resume), previously spoken words
-      // are preserved and not overwritten.
-      const base = voiceBaseRef.current;
-      const finalSoFar = finalTranscriptRef.current.trim();
-      if (finalSoFar) {
-        voiceBaseRef.current = (base + (base && finalSoFar ? " " : "") + finalSoFar).trim();
-        finalTranscriptRef.current = "";
-      }
-      setIsListening(false);
-    };
+    const recognition = startRecognitionInstance(SpeechRecognition);
     recognition.start();
   };
 
