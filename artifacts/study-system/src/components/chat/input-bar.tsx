@@ -33,6 +33,12 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
   const imageInputRef = useRef<HTMLInputElement>(null);
   const pdfInputRef = useRef<HTMLInputElement>(null);
   const recognitionRef = useRef<any>(null);
+  // Monotonically-increasing session counter.  Each call to startRecognitionInstance
+  // increments this and closes over the value as `mySessionId`.  Every event handler
+  // checks `sessionIdRef.current === mySessionId` before doing any work, so events
+  // from stale / already-ended instances are immediately dropped even if they arrive
+  // late from the browser's event queue — the primary cause of word duplication.
+  const sessionIdRef = useRef<number>(0);
   const voiceBaseRef = useRef<string>("");
   const finalTranscriptRef = useRef<string>("");
   const processedIndexRef = useRef<number>(0);
@@ -120,45 +126,69 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
   const removePendingFile = () => setPendingFile(null);
 
   const stopVoice = () => {
+    // Invalidate current session FIRST so any in-flight or queued events are
+    // dropped before the abort triggers its own onend/onerror callbacks.
+    sessionIdRef.current += 1;
     manualStopRef.current = true;
-    recognitionRef.current?.stop();
+    try { recognitionRef.current?.abort(); } catch { /* already stopped */ }
     recognitionRef.current = null;
     setIsListening(false);
   };
 
-  // How long after an auto-restart to filter Chrome's echo of previous speech.
-  // Chrome replays audio from its buffer as new finals on restart; this window
-  // catches all echoed fragments, not just the first one.
+  // How long after an auto-restart to suppress Chrome's echo of previous speech.
   const ECHO_WINDOW_MS = 1200;
 
   const startRecognitionInstance = (SpeechRecognition: any) => {
+    // ── Session isolation ──────────────────────────────────────────────────
+    // Increment the global counter FIRST.  The old instance's handlers (if any
+    // fire late from the browser queue) will find their closed-over mySessionId
+    // no longer matches sessionIdRef.current and will return immediately — this
+    // is the root cause fix for word duplication on Android Chrome, where buffered
+    // onresult events from a just-ended session arrive after the new session starts.
+    const mySessionId = (sessionIdRef.current += 1);
+
+    // Hard-kill any previous instance AFTER bumping the counter so its onend
+    // (if abort triggers one) also sees a stale ID and does nothing.
+    if (recognitionRef.current) {
+      try { recognitionRef.current.abort(); } catch { /* already stopped */ }
+      recognitionRef.current = null;
+    }
+
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
     recognition.continuous = true;
     recognition.interimResults = true;
     recognition.lang = "en-NG";
 
-    recognition.onstart = () => setIsListening(true);
+    // ── Guard helper — every handler calls this first ──────────────────────
+    const isCurrentSession = () => sessionIdRef.current === mySessionId;
+
+    recognition.onstart = () => {
+      if (!isCurrentSession()) return;
+      setIsListening(true);
+    };
 
     recognition.onresult = (event: any) => {
+      // Drop events from any session that is no longer current.
+      // This is the single most important guard: it prevents stale buffered
+      // events from old recognition instances from contaminating voiceBaseRef.
+      if (!isCurrentSession()) return;
+
       const now = Date.now();
       const inEchoWindow =
         restartTimeRef.current > 0 &&
         now - restartTimeRef.current < ECHO_WINDOW_MS;
       const snapshot = restartBaseRef.current.toLowerCase();
 
-      // ── Final commit loop ──────────────────────────────────────────────────
+      // ── Final commit loop ────────────────────────────────────────────────
       // Start from processedIndexRef (not event.resultIndex) so Chrome
       // re-firing resultIndex=0 on internal resets cannot double-add finals.
       for (let i = processedIndexRef.current; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
           const t = event.results[i][0].transcript.trim();
           if (t) {
-            // Echo window guard: Chrome echoes fragments from the previous
-            // session as new finals after auto-restart (e.g. "you", "are you",
-            // "how are you" as separate results). Guard covers ALL fragments in
-            // the window, not just the first, by checking against the snapshot
-            // of voiceBase taken at restart time (not the evolving current base).
+            // Secondary echo guard: within ECHO_WINDOW_MS of a restart, skip
+            // any final whose text already exists in the pre-restart snapshot.
             const isEcho =
               inEchoWindow &&
               snapshot.length > 0 &&
@@ -172,11 +202,10 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
         }
       }
 
-      // ── Interim display ────────────────────────────────────────────────────
-      // Start from processedIndexRef (not event.resultIndex) so already-committed
-      // text never appears in the interim suffix. This also prevents duplicate
-      // display when Chrome fires an internal reset with resultIndex=0 while
-      // voiceBase already holds committed text.
+      // ── Interim display ──────────────────────────────────────────────────
+      // Use processedIndexRef (not event.resultIndex) so already-committed text
+      // never appears in the interim suffix, preventing duplicate display when
+      // Chrome fires an internal reset with resultIndex=0.
       let interimTranscript = "";
       for (let i = processedIndexRef.current; i < event.results.length; i++) {
         if (!event.results[i].isFinal) {
@@ -186,8 +215,7 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
       const base = voiceBaseRef.current;
       const live = interimTranscript.trim();
 
-      // During echo window: also suppress interim text that is a substring of
-      // the pre-restart snapshot so the display doesn't flicker with old words.
+      // Suppress interim echo during window.
       const liveIsEcho =
         inEchoWindow &&
         snapshot.length > 0 &&
@@ -199,6 +227,7 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
     };
 
     recognition.onerror = (event: any) => {
+      if (!isCurrentSession()) return;
       if (event.error === "not-allowed") {
         manualStopRef.current = true;
         setIsListening(false);
@@ -207,30 +236,27 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
           description: "Allow microphone access in your browser settings.",
           variant: "destructive",
         });
-      } else if (event.error === "no-speech" || event.error === "aborted") {
-        // Pause or manual abort — do not toast or stop the listening UI.
-      } else {
-        // Network or audio-capture errors — do not stop UI; let onend restart.
       }
+      // "no-speech" / "aborted" / network errors: let onend handle restart.
     };
 
     recognition.onend = () => {
-      // voiceBaseRef already contains all finalized text (committed inline in
-      // onresult), so nothing extra needs committing here.
+      // Only the current session may restart. If a previous session fires onend
+      // late (e.g. after abort()), its mySessionId no longer matches → ignored.
+      if (!isCurrentSession()) return;
+
       finalTranscriptRef.current = "";
       processedIndexRef.current = 0;
 
       if (!manualStopRef.current) {
-        // Auto-restart: record timestamp and base snapshot so the echo window
-        // guard can filter Chrome's replayed audio across ALL result events,
-        // not just the first final result (previous sessionFreshRef approach).
+        // Snapshot base and timestamp for echo suppression in the new session.
         restartTimeRef.current = Date.now();
         restartBaseRef.current = voiceBaseRef.current;
         // Always create a fresh instance; calling .start() on an ended instance
         // throws InvalidStateError in Chrome.
         try {
           startRecognitionInstance(SpeechRecognition);
-          recognitionRef.current.start();
+          recognitionRef.current?.start();
         } catch {
           setIsListening(false);
         }
@@ -259,18 +285,15 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
     }
     setMenuOpen(false);
 
-    if (recognitionRef.current) {
-      recognitionRef.current.abort();
-      recognitionRef.current = null;
-    }
-
-    // Capture whatever the user already typed so voice is appended, not replaced.
+    // Reset all voice state BEFORE startRecognitionInstance increments the
+    // session ID. The function itself kills the previous instance internally
+    // (after bumping the counter) so no explicit abort is needed here — doing
+    // it here before the counter bump would let the old onend pass the session
+    // check and attempt a spurious restart.
     voiceBaseRef.current = input.trim();
-    // Reset all session state.
     finalTranscriptRef.current = "";
     processedIndexRef.current = 0;
     manualStopRef.current = false;
-    // No echo window on a fresh user-initiated start — only auto-restarts need it.
     restartTimeRef.current = 0;
     restartBaseRef.current = "";
 
