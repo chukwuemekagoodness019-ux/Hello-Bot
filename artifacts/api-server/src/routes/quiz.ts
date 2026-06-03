@@ -5,42 +5,13 @@ import { GenerateQuizBody, SubmitQuizBody } from "@workspace/api-zod";
 import { generateQuiz } from "../lib/ai";
 import { isFlagEnabled } from "../lib/flags";
 import crypto from "node:crypto";
-import { quizStore, gcQuizzes } from "../lib/exam-store";
+import { quizStore, gcQuizzes, setExam, updateSubmittedUsers, deleteQuiz } from "../lib/exam-store";
+import { canCreateExam } from "../lib/exam-limits";
 
 const router: IRouter = Router();
 
-const examLimits = new Map<string | number, { week: { start: string; count: number }; month: { start: string; count: number } }>();
-
 function todayKey(d = new Date()) {
   return d.toISOString().slice(0, 10);
-}
-
-function weekKey(d = new Date()) {
-  const dt = new Date(Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate()));
-  const dayNum = dt.getUTCDay() || 7;
-  dt.setUTCDate(dt.getUTCDate() + 4 - dayNum);
-  const year = dt.getUTCFullYear();
-  const yearStart = new Date(Date.UTC(year, 0, 1));
-  const weekNo = Math.ceil((((dt.getTime() - yearStart.getTime()) / 86400000) + 1) / 7);
-  return `${year}-W${String(weekNo).padStart(2, "0")}`;
-}
-
-function monthKey(d = new Date()) {
-  return `${d.getUTCFullYear()}-${String(d.getUTCMonth() + 1).padStart(2, "0")}`;
-}
-
-function canCreateExam(userId: string | number, plan: "weekly" | "monthly") {
-  const currentWeek = weekKey();
-  const currentMonth = monthKey();
-  const state = examLimits.get(userId) || { week: { start: currentWeek, count: 0 }, month: { start: currentMonth, count: 0 } };
-  if (state.week.start !== currentWeek) state.week = { start: currentWeek, count: 0 };
-  if (state.month.start !== currentMonth) state.month = { start: currentMonth, count: 0 };
-  const limit = plan === "weekly" ? 3 : 10;
-  const period = plan === "weekly" ? state.week : state.month;
-  if (period.count >= limit) return false;
-  period.count += 1;
-  examLimits.set(userId, state);
-  return true;
 }
 
 function normalize(s: string): string {
@@ -88,7 +59,7 @@ router.post("/quiz/generate", sessionMiddleware, async (req, res, next) => {
     }
     const quizId = crypto.randomBytes(12).toString("hex");
     gcQuizzes();
-    quizStore.set(quizId, { userId: u.id, questions: generated, createdAt: Date.now(), title: subject, submittedUserIds: new Set() });
+    setExam(quizId, { userId: u.id, questions: generated, createdAt: Date.now(), title: subject, submittedUserIds: new Set() });
     await updateUser(u.id, { quizzesUsedToday: u.quizzesUsedToday + 1 });
     res.json({ quizId, subject, difficulty, questionType, timeMinutes, questions: generated.map((q) => ({ id: q.id, prompt: q.prompt, type: q.type, options: q.options })) });
   } catch (err) {
@@ -138,7 +109,7 @@ router.post("/exam/generate", sessionMiddleware, async (req, res, next) => {
     }
     const examId = crypto.randomBytes(12).toString("hex");
     gcQuizzes();
-    quizStore.set(examId, {
+    setExam(examId, {
       userId: u.id, questions: generated, createdAt: Date.now(), title: subject,
       timeMinutes: parsed.data.timeMinutes, subject, difficulty,
       questionType, expiresAt, maxAttempts, submittedUserIds: new Set(),
@@ -160,7 +131,7 @@ router.get("/exam/:id", sessionMiddleware, async (req, res) => {
   const exam = quizStore.get(examId);
   if (!exam) { res.status(404).json({ error: "Exam not found or has expired.", code: "EXAM_NOT_FOUND" }); return; }
   if (exam.expiresAt && Date.now() > exam.expiresAt) {
-    quizStore.delete(examId);
+    deleteQuiz(examId);
     res.status(404).json({ error: "This exam has expired.", code: "EXAM_EXPIRED" });
     return;
   }
@@ -190,7 +161,7 @@ router.post("/exam/submit", sessionMiddleware, async (req, res, next) => {
     const stored = quizStore.get(quizId);
     if (!stored) { res.status(404).json({ error: "Exam not found or expired", code: "EXAM_NOT_FOUND" }); return; }
     if (stored.expiresAt && Date.now() > stored.expiresAt) {
-      quizStore.delete(quizId);
+      deleteQuiz(quizId);
       res.status(404).json({ error: "This exam has expired.", code: "EXAM_EXPIRED" });
       return;
     }
@@ -222,6 +193,7 @@ router.post("/exam/submit", sessionMiddleware, async (req, res, next) => {
     const total = stored.questions.length;
     const percent = Math.round((score / Math.max(total, 1)) * 100);
     stored.submittedUserIds.add(u.id);
+    updateSubmittedUsers(quizId);
     await insertQuizAttempt({ userId: u.id, subject, score, total, percent });
 
     const today = todayKey();
@@ -278,7 +250,7 @@ router.post("/quiz/submit", sessionMiddleware, async (req, res, next) => {
     const newBestScore = Math.max(u.bestScore, percent);
     await updateUser(u.id, { currentStreak: newCurrent, bestStreak: newBestStreak, bestScore: newBestScore, lastActiveDate: today });
     await insertQuizAttempt({ userId: u.id, subject, score, total, percent });
-    quizStore.delete(quizId);
+    deleteQuiz(quizId);
     res.json({ quizId, score, total, percent, results, streak: { currentStreak: newCurrent, bestStreak: newBestStreak, bestScore: newBestScore } });
   } catch (err) { next(err); }
 });

@@ -7,7 +7,8 @@ description: Monorepo structure, AI chain, auth, volatile state, and all hardeni
 Order: OpenRouter → OpenAI → DeepSeek → Groq (llama-3.3-70b-versatile).
 Groq uses OpenAI-compatible client at https://api.groq.com/openai/v1.
 CRITICAL: Render env var is `GROK_API_KEY` (not GROQ). Code must check: `process.env.GROQ_API_KEY || process.env.GROK_API_KEY`.
-classifyError() distinguishes: isRateLimited (HTTP 429) → "Rate Limited", isQuota (HTTP 402) → "Out of Credits", isAuthError (401) → "Invalid Key".
+classifyError() distinguishes: isRateLimited (HTTP 429 non-quota) → "Rate Limited", isQuota (HTTP 402 OR quota text) → "Out of Credits", isAuthError (401) → "Invalid Key".
+CRITICAL: isQuota must be checked BEFORE isRateLimited — OpenAI returns HTTP 429 for BOTH rate limits AND quota exhaustion. Differentiate via message text: "exceeded your current quota" / "insufficient_quota" → isQuota. If isRateLimited is checked first, OpenAI out-of-credits appears as "Rate Limited" in admin dashboard.
 DeepSeek-specific patterns added to classifyError: "authentication fails", "authentication failed", "auth_subrequest_failed" → isAuthError; "insufficient balance", "account has run out", "out of credit", "payment required" → isQuota; "overloaded", "overload" → isRateLimited.
 Admin Refresh button passes ?force=true to bypass 30s cache. getAiStatus(force) signature.
 AiStatusResult interface: openrouter, openai, deepseek, groq. AiProviderHealth.errorDetail?: string — raw error message for admin debugging (pingOne captures it).
@@ -35,9 +36,12 @@ app.set("trust proxy", 1) added to app.ts for Render.com proxy.
 announcements.ts: write-through cache. initAnnouncements() loads from `app_announcements` table at startup.
 flags.ts: same write-through pattern. initFlags() loads from `feature_flags` table. isFlagEnabled() stays synchronous.
 user-messages.ts: fully async. Reads/writes go to `admin_messages` table with in-memory Map fallback.
-exam-store.ts (quizStore): intentionally kept in-memory (exams expire in 4h).
+exam-store.ts (quizStore): NOW Supabase write-through. setExam(), updateSubmittedUsers(), deleteQuiz() for writes; initExamStore() at startup. revokeExam() delegates to deleteQuiz().
+exam-limits.ts (NEW lib): canCreateExam() + initExamLimits() with Supabase write-through on period `exam_limits` table (PRIMARY KEY user_id,period). Quiz.ts now imports from this lib — no longer has inline examLimits Map.
 admin tokens (admin.ts): intentionally in-memory (security — 4h TTL).
-SQL migration: artifacts/api-server/migrations/001_persistent_store.sql — run once in Supabase SQL editor.
+rejection-reasons.ts: Supabase write-through on `payment_rejection_reasons` table.
+error-log.ts: Supabase write-through on `ai_error_log` table.
+SQL migrations: 001 = initial persistent store; 002 = rejection_reasons + ai_error_log; 003 = active_exams + exam_limits. All run once in Supabase SQL editor. Server falls back to in-memory gracefully if tables absent.
 
 ## Quiz/Exam Generation
 generateQuiz() max_tokens MUST be 8192 (not 4096) — 50 questions with options/answers/explanations easily exceeds 4096 tokens and truncates JSON.
@@ -53,7 +57,8 @@ processedIndexRef tracks which result indices have already been finalized — lo
 manualStopRef: set to true in stopVoice() — distinguishes manual stops from browser-ended sessions.
 CRITICAL VOICE BUG FIX: DO NOT use `combined = finalTranscriptRef + interimTranscript` for display. Chrome's continuous-mode interimTranscript contains the FULL utterance so far (including already-finalized words), so combining both doubles/triples words ("How how how"). 
 CORRECT PATTERN: In onresult, commit finals IMMEDIATELY to voiceBaseRef (not finalTranscriptRef), then display = voiceBaseRef.current + " " + interimTranscript.trim() only. interimTranscript is truly only the unsettled suffix.
-onend: voiceBaseRef already has all finalized text, so just reset finalTranscriptRef and processedIndexRef. If !manualStopRef, create a NEW recognition instance and call .start() — never call .start() on an ended instance (throws InvalidStateError in Chrome).
+VOICE ECHO BUG (auto-restart): sessionFreshRef approach INSUFFICIENT — it only guards the FIRST final result after restart. Chrome echoes MULTIPLE fragments ("you", "are you", "how are you") as separate final results. CORRECT FIX: restartTimeRef (timestamp) + restartBaseRef (voiceBase snapshot at restart). In onresult, during ECHO_WINDOW_MS (1200ms), skip any final text whose lowercase form appears in restartBaseRef (covers all fragments, not just first). Also use processedIndexRef.current (NOT event.resultIndex) for interim loop — prevents duplicate interim display when Chrome fires internal reset with resultIndex=0. On fresh user-initiated startVoice(), reset restartTimeRef=0 so echo window is inactive.
+onend: voiceBaseRef already has all finalized text, so just reset finalTranscriptRef and processedIndexRef. If !manualStopRef, record restartTimeRef+restartBaseRef THEN create a NEW recognition instance and call .start() — never call .start() on an ended instance (throws InvalidStateError in Chrome).
 Auto-restart ensures the user doesn't have to tap mic again after Chrome's ~60s silence timeout.
 onerror: "no-speech" and "aborted" are silently ignored. "not-allowed" sets manualStopRef=true.
 

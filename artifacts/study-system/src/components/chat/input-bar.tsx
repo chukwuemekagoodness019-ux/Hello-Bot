@@ -37,7 +37,8 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
   const finalTranscriptRef = useRef<string>("");
   const processedIndexRef = useRef<number>(0);
   const manualStopRef = useRef<boolean>(false);
-  const sessionFreshRef = useRef<boolean>(false);
+  const restartTimeRef = useRef<number>(0);
+  const restartBaseRef = useRef<string>("");
   const menuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
@@ -125,6 +126,11 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
     setIsListening(false);
   };
 
+  // How long after an auto-restart to filter Chrome's echo of previous speech.
+  // Chrome replays audio from its buffer as new finals on restart; this window
+  // catches all echoed fragments, not just the first one.
+  const ECHO_WINDOW_MS = 1200;
+
   const startRecognitionInstance = (SpeechRecognition: any) => {
     const recognition = new SpeechRecognition();
     recognitionRef.current = recognition;
@@ -135,41 +141,61 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
     recognition.onstart = () => setIsListening(true);
 
     recognition.onresult = (event: any) => {
-      // Commit newly finalized results IMMEDIATELY into voiceBaseRef.
-      // Starting from processedIndexRef (not event.resultIndex) so Chrome
+      const now = Date.now();
+      const inEchoWindow =
+        restartTimeRef.current > 0 &&
+        now - restartTimeRef.current < ECHO_WINDOW_MS;
+      const snapshot = restartBaseRef.current.toLowerCase();
+
+      // ── Final commit loop ──────────────────────────────────────────────────
+      // Start from processedIndexRef (not event.resultIndex) so Chrome
       // re-firing resultIndex=0 on internal resets cannot double-add finals.
       for (let i = processedIndexRef.current; i < event.results.length; i++) {
         if (event.results[i].isFinal) {
           const t = event.results[i][0].transcript.trim();
           if (t) {
-            const base = voiceBaseRef.current;
-            // Restart-echo guard: Chrome sometimes fires the last phrase of the
-            // previous session as the very first final result of a new session.
-            // Skip it if voiceBase already ends with that exact text.
-            const isRestartEcho =
-              sessionFreshRef.current &&
-              base.length > 0 &&
-              base.toLowerCase().endsWith(t.toLowerCase());
-            if (!isRestartEcho) {
+            // Echo window guard: Chrome echoes fragments from the previous
+            // session as new finals after auto-restart (e.g. "you", "are you",
+            // "how are you" as separate results). Guard covers ALL fragments in
+            // the window, not just the first, by checking against the snapshot
+            // of voiceBase taken at restart time (not the evolving current base).
+            const isEcho =
+              inEchoWindow &&
+              snapshot.length > 0 &&
+              snapshot.includes(t.toLowerCase());
+            if (!isEcho) {
+              const base = voiceBaseRef.current;
               voiceBaseRef.current = base ? base + " " + t : t;
             }
           }
           processedIndexRef.current = i + 1;
-          sessionFreshRef.current = false; // First result committed — no longer fresh session
         }
       }
-      // Collect the current in-progress (interim) text from event.resultIndex forward.
-      // This is ONLY the unsettled suffix — it never overlaps with what was
-      // finalized above, eliminating the "How how how" doubling/tripling bug.
+
+      // ── Interim display ────────────────────────────────────────────────────
+      // Start from processedIndexRef (not event.resultIndex) so already-committed
+      // text never appears in the interim suffix. This also prevents duplicate
+      // display when Chrome fires an internal reset with resultIndex=0 while
+      // voiceBase already holds committed text.
       let interimTranscript = "";
-      for (let i = event.resultIndex; i < event.results.length; i++) {
+      for (let i = processedIndexRef.current; i < event.results.length; i++) {
         if (!event.results[i].isFinal) {
           interimTranscript += event.results[i][0].transcript;
         }
       }
       const base = voiceBaseRef.current;
       const live = interimTranscript.trim();
-      setInput(live ? (base ? base + " " + live : live) : base);
+
+      // During echo window: also suppress interim text that is a substring of
+      // the pre-restart snapshot so the display doesn't flicker with old words.
+      const liveIsEcho =
+        inEchoWindow &&
+        snapshot.length > 0 &&
+        live.length > 0 &&
+        snapshot.includes(live.toLowerCase());
+      const displayLive = liveIsEcho ? "" : live;
+
+      setInput(displayLive ? (base ? base + " " + displayLive : displayLive) : base);
     };
 
     recognition.onerror = (event: any) => {
@@ -195,12 +221,13 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
       processedIndexRef.current = 0;
 
       if (!manualStopRef.current) {
-        // Browser ended the session (silence timeout, network blip) — auto-restart.
+        // Auto-restart: record timestamp and base snapshot so the echo window
+        // guard can filter Chrome's replayed audio across ALL result events,
+        // not just the first final result (previous sessionFreshRef approach).
+        restartTimeRef.current = Date.now();
+        restartBaseRef.current = voiceBaseRef.current;
         // Always create a fresh instance; calling .start() on an ended instance
         // throws InvalidStateError in Chrome.
-        // Mark session as fresh so the restart-echo guard activates for the
-        // first result of the new session.
-        sessionFreshRef.current = true;
         try {
           startRecognitionInstance(SpeechRecognition);
           recognitionRef.current.start();
@@ -243,6 +270,9 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
     finalTranscriptRef.current = "";
     processedIndexRef.current = 0;
     manualStopRef.current = false;
+    // No echo window on a fresh user-initiated start — only auto-restarts need it.
+    restartTimeRef.current = 0;
+    restartBaseRef.current = "";
 
     const recognition = startRecognitionInstance(SpeechRecognition);
     recognition.start();

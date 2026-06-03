@@ -230,21 +230,26 @@ function classifyError(err: unknown): { reason: string; isQuota: boolean; isRate
   const status = err && typeof err === "object" ? (err as { status?: number }).status : undefined;
   const code = err && typeof err === "object" ? String((err as { code?: unknown }).code ?? "") : "";
   const lower = `${msg} ${code}`.toLowerCase();
-  // 429 = rate limited (temporary); 402 / billing text = out of credits (account issue)
-  const isRateLimited =
-    status === 429 ||
-    lower.includes("rate limit") || lower.includes("ratelimit") || lower.includes("too many requests") ||
-    lower.includes("overloaded") || lower.includes("overload");
+  // Quota/billing exhaustion — checked FIRST because OpenAI returns HTTP 429 for
+  // BOTH rate limits AND quota exhaustion; the message text distinguishes them.
   const isQuota =
-    !isRateLimited && (
-      status === 402 ||
-      lower.includes("quota") || lower.includes("insufficient") ||
-      lower.includes("balance") || lower.includes("billing") ||
-      lower.includes("exceeded your current quota") ||
-      lower.includes("insufficient balance") ||    // DeepSeek
-      lower.includes("account has run out") ||     // OpenAI variant
-      lower.includes("out of credit") ||           // generic
-      lower.includes("payment required")
+    status === 402 ||
+    lower.includes("exceeded your current quota") ||  // OpenAI quota via 429
+    lower.includes("insufficient_quota") ||            // OpenAI error code
+    lower.includes("quota") ||
+    lower.includes("insufficient balance") ||          // DeepSeek
+    lower.includes("insufficient") ||
+    lower.includes("balance") ||
+    lower.includes("account has run out") ||
+    lower.includes("out of credit") ||
+    lower.includes("payment required") ||
+    (lower.includes("billing") && !lower.includes("rate limit"));
+  // 429 = temporary rate limit (NOT quota — quota is caught above first).
+  const isRateLimited =
+    !isQuota && (
+      status === 429 ||
+      lower.includes("rate limit") || lower.includes("ratelimit") || lower.includes("too many requests") ||
+      lower.includes("overloaded") || lower.includes("overload")
     );
   // Auth errors: wrong key, expired key, unauthorized — distinct from transient outage.
   // Includes DeepSeek-specific messages ("Authentication Fails", "auth_subrequest_failed").

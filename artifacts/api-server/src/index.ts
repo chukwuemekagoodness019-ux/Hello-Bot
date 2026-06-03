@@ -4,6 +4,8 @@ import { initFlags } from "./lib/flags";
 import { initAnnouncements } from "./lib/announcements";
 import { initRejectionReasons } from "./lib/rejection-reasons";
 import { initErrorLog } from "./lib/error-log";
+import { initExamStore } from "./lib/exam-store";
+import { initExamLimits } from "./lib/exam-limits";
 
 const rawPort = process.env["PORT"];
 
@@ -26,6 +28,8 @@ Promise.all([
   initAnnouncements(),
   initRejectionReasons(),
   initErrorLog(),
+  initExamStore(),
+  initExamLimits(),
 ]).catch((err) => {
   logger.warn({ err }, "Persistent store bootstrap partial — using in-memory defaults");
 });
