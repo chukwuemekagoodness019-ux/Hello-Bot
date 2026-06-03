@@ -437,7 +437,7 @@ export default function ExamPage() {
   const userLoaded = user !== undefined;
 
   const BottomNav = () => (
-    <nav className="fixed bottom-0 inset-x-0 z-20 bg-slate-950/95 backdrop-blur-sm border-t border-white/8 flex md:hidden nav-safe">
+    <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden nav-safe">
       <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
         <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
       </button>
@@ -452,7 +452,7 @@ export default function ExamPage() {
 
   if (autoJoining) {
     return (
-      <div className="h-full bg-slate-950 text-slate-100 flex flex-col items-center justify-center gap-4">
+      <div className="h-full chat-page-bg text-slate-100 flex flex-col items-center justify-center gap-4">
         <div className="w-14 h-14 bg-primary/10 rounded-2xl flex items-center justify-center">
           <FileText className="w-7 h-7 text-primary animate-pulse" />
         </div>
@@ -464,8 +464,8 @@ export default function ExamPage() {
 
   if (!flags.exam) {
     return (
-      <div className="h-full bg-slate-950 text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
-        <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-slate-950/95 backdrop-blur-sm sticky top-0 z-30">
+      <div className="h-full chat-page-bg text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
+        <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-black/30 backdrop-blur-sm sticky top-0 z-30">
           <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
           </button>
@@ -489,8 +489,8 @@ export default function ExamPage() {
 
   if (userLoaded && !isPremium && state === "form" && !autoJoining) {
     return (
-      <div className="h-full bg-slate-950 text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
-        <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-slate-950/95 backdrop-blur-sm sticky top-0 z-30">
+      <div className="h-full chat-page-bg text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
+        <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-black/30 backdrop-blur-sm sticky top-0 z-30">
           <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
           </button>
@@ -547,8 +547,8 @@ export default function ExamPage() {
   }
 
   return (
-    <div className="h-full bg-slate-950 text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
-      <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-slate-950/95 backdrop-blur-sm sticky top-0 z-30">
+    <div className="h-full chat-page-bg text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
+      <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-black/30 backdrop-blur-sm sticky top-0 z-30">
         <button
           className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors"
           onClick={() => setLocation("/", { replace: true })}
@@ -589,13 +589,13 @@ export default function ExamPage() {
 
             <div className="flex rounded-xl border border-white/10 overflow-hidden">
               <button
-                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${!joinMode ? "bg-primary text-primary-foreground" : "bg-slate-950 text-slate-400 hover:text-slate-100"}`}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${!joinMode ? "bg-primary text-primary-foreground" : "bg-white/5 text-slate-400 hover:text-slate-100"}`}
                 onClick={() => setJoinMode(false)}
               >
                 Create Exam
               </button>
               <button
-                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${joinMode ? "bg-primary text-primary-foreground" : "bg-slate-950 text-slate-400 hover:text-slate-100"}`}
+                className={`flex-1 py-2.5 text-sm font-medium transition-colors ${joinMode ? "bg-primary text-primary-foreground" : "bg-white/5 text-slate-400 hover:text-slate-100"}`}
                 onClick={() => setJoinMode(true)}
               >
                 Join Exam
@@ -603,7 +603,7 @@ export default function ExamPage() {
             </div>
 
             {joinMode ? (
-              <div className="p-6 glass rounded-xl border border-white/10 shadow-sm space-y-4">
+              <div className="p-6 glass-cyber rounded-xl shadow-sm space-y-4">
                 <div className="space-y-1">
                   <h2 className="font-semibold">Join a Shared Exam</h2>
                   <p className="text-sm text-slate-400">Enter the exam code provided by the exam creator.</p>
@@ -624,7 +624,7 @@ export default function ExamPage() {
                 </p>
               </div>
             ) : (
-              <form onSubmit={handleGenerate} className="space-y-4 p-6 glass rounded-xl border border-white/10 shadow-sm">
+              <form onSubmit={handleGenerate} className="space-y-4 p-6 glass-cyber rounded-xl shadow-sm">
                 <div className="space-y-2">
                   <Label>Subject / Topic</Label>
                   <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. WAEC Biology, JAMB Chemistry, A-Level Math" required className="h-11" />
@@ -738,7 +738,7 @@ export default function ExamPage() {
 
         {state === "share" && activeQuiz && (
           <div className="space-y-6 animate-in fade-in slide-in-from-bottom-4 duration-500">
-            <div className="text-center space-y-2 p-8 glass border border-white/10 rounded-2xl shadow-sm">
+            <div className="text-center space-y-2 p-8 glass-cyber rounded-2xl shadow-sm">
               <div className="w-16 h-16 bg-primary/20 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Share2 className="w-8 h-8 text-primary" />
               </div>
@@ -757,7 +757,7 @@ export default function ExamPage() {
               </div>
             </div>
 
-            <div className="p-5 glass border border-white/10 rounded-xl shadow-sm space-y-4">
+            <div className="p-5 glass-cyber rounded-xl shadow-sm space-y-4">
               <div className="flex items-center gap-2 mb-1">
                 <Link2 className="w-4 h-4 text-primary" />
                 <h3 className="font-semibold text-sm">Share this Exam</h3>
@@ -768,7 +768,7 @@ export default function ExamPage() {
                 <div className="space-y-1.5">
                   <Label className="text-xs text-slate-400">Exam Code</Label>
                   <div className="flex items-center gap-2">
-                    <code className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-primary truncate">
+                    <code className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono text-primary truncate">
                       {examShareCode}
                     </code>
                     <Button
@@ -786,7 +786,7 @@ export default function ExamPage() {
                   <div className="space-y-1.5">
                     <Label className="text-xs text-slate-400">Share Link</Label>
                     <div className="flex items-center gap-2">
-                      <code className="flex-1 bg-slate-950 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono truncate text-slate-400">
+                      <code className="flex-1 bg-white/5 border border-white/10 rounded-lg px-3 py-2 text-xs font-mono truncate text-slate-400">
                         {examShareLink}
                       </code>
                       <Button
@@ -848,7 +848,7 @@ export default function ExamPage() {
 
             <div className="space-y-5">
               {activeQuiz.questions.map((q, i) => (
-                <div key={q.id} className="p-5 glass rounded-xl border border-white/10 shadow-sm">
+                <div key={q.id} className="p-5 glass-cyber rounded-xl shadow-sm">
                   <div className="flex gap-3 mb-4">
                     <span className="flex items-center justify-center w-7 h-7 bg-primary/10 text-primary text-sm font-bold rounded-full shrink-0 mt-0.5">{i + 1}</span>
                     <h3 className="text-base font-medium leading-relaxed">{q.prompt}</h3>
@@ -858,7 +858,7 @@ export default function ExamPage() {
                       {q.options.map((opt, oi) => (
                         <button
                           key={oi}
-                          className={`w-full text-left p-3 rounded-lg border text-sm transition-all ${answers[q.id] === opt ? "bg-primary/10 border-primary font-medium ring-1 ring-primary/30" : "bg-slate-950 border-white/10 hover:border-primary/40 hover:bg-white/5"}`}
+                          className={`w-full text-left p-3 rounded-lg border text-sm transition-all ${answers[q.id] === opt ? "bg-primary/10 border-primary font-medium ring-1 ring-primary/30" : "bg-white/4 border-white/10 hover:border-primary/40 hover:bg-white/8"}`}
                           onClick={() => { const next = { ...answersRef.current, [q.id]: opt }; answersRef.current = next; setAnswers(next); }}
                         >
                           <span className="text-slate-400 font-mono mr-2 text-xs">{String.fromCharCode(65 + oi)}.</span>{opt}
@@ -884,7 +884,7 @@ export default function ExamPage() {
 
         {state === "results" && quizResult && (
           <div className="space-y-6 animate-in zoom-in-95 duration-500">
-            <div className="text-center space-y-2 p-8 glass border border-white/10 rounded-2xl shadow-sm">
+            <div className="text-center space-y-2 p-8 glass-cyber rounded-2xl shadow-sm">
               <div className="flex items-center justify-center gap-2 mb-3 text-primary">
                 <Trophy className="w-6 h-6" /><h2 className="text-2xl font-bold">Exam Complete</h2>
               </div>

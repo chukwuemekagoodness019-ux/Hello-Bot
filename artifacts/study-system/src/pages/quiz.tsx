@@ -132,8 +132,8 @@ export default function QuizPage() {
 
   if (!flags.quiz) {
     return (
-      <div className="h-full bg-slate-950 text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
-        <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-slate-950/95 backdrop-blur-sm sticky top-0 z-30">
+      <div className="h-full chat-page-bg text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
+        <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-black/30 backdrop-blur-sm sticky top-0 z-30">
           <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
           </button>
@@ -149,7 +149,7 @@ export default function QuizPage() {
           <h2 className="text-xl font-bold mb-2 text-white">Quiz Unavailable</h2>
           <p className="text-slate-400 text-sm">This feature is temporarily unavailable. Please check back later.</p>
         </main>
-        <nav className="fixed bottom-0 inset-x-0 z-20 bg-slate-950/95 backdrop-blur-sm border-t border-white/8 flex md:hidden nav-safe">
+        <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden nav-safe">
           <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
           </button>
@@ -165,8 +165,8 @@ export default function QuizPage() {
   }
 
   return (
-    <div className="h-full bg-slate-950 text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
-      <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-slate-950/95 backdrop-blur-sm sticky top-0 z-30">
+    <div className="h-full chat-page-bg text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
+      <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-black/30 backdrop-blur-sm sticky top-0 z-30">
         <button
           className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors"
           onClick={() => setLocation("/", { replace: true })}
@@ -193,7 +193,7 @@ export default function QuizPage() {
               <p className="text-slate-400 text-sm">Set up a quick quiz to test your knowledge.</p>
             </div>
 
-            <form onSubmit={handleGenerate} className="space-y-4 p-6 glass rounded-xl border border-white/10 shadow-sm">
+            <form onSubmit={handleGenerate} className="space-y-4 p-6 glass-cyber rounded-xl shadow-sm">
               <div className="space-y-2">
                 <Label>Subject / Topic</Label>
                 <Input value={subject} onChange={(e) => setSubject(e.target.value)} placeholder="e.g. Cell Biology, WAEC Math, Macroeconomics" required className="h-11" />
@@ -255,7 +255,7 @@ export default function QuizPage() {
 
         {state === "running" && activeQuiz && (
           <div className="space-y-6 animate-in fade-in slide-in-from-right-8 duration-300">
-            <div className="flex justify-between items-center glass p-4 rounded-xl border border-white/10 shadow-sm">
+            <div className="flex justify-between items-center glass-cyber p-4 rounded-xl shadow-sm">
               <div>
                 <span className="text-sm font-medium text-slate-400 block">
                   Question {currentQuestionIdx + 1} of {activeQuiz.questions.length}
@@ -275,7 +275,7 @@ export default function QuizPage() {
               </div>
             </div>
 
-            <div className="p-6 glass rounded-xl border border-white/10 shadow-sm min-h-[280px] flex flex-col">
+            <div className="p-6 glass-cyber rounded-xl shadow-sm min-h-[280px] flex flex-col">
               <h3 className="text-lg font-medium mb-6 leading-relaxed">
                 {activeQuiz.questions[currentQuestionIdx]?.prompt}
               </h3>
@@ -286,7 +286,7 @@ export default function QuizPage() {
                     {activeQuiz.questions[currentQuestionIdx].options!.map((opt: string, i: number) => (
                       <button
                         key={i}
-                        className={`w-full text-left p-4 rounded-xl border transition-all text-sm ${answers[activeQuiz.questions[currentQuestionIdx].id] === opt ? "bg-primary/10 border-primary font-medium ring-1 ring-primary/30" : "bg-slate-950 border-white/10 hover:border-primary/40 hover:bg-white/5"}`}
+                        className={`w-full text-left p-4 rounded-xl border transition-all text-sm ${answers[activeQuiz.questions[currentQuestionIdx].id] === opt ? "bg-primary/10 border-primary font-medium ring-1 ring-primary/30" : "bg-white/4 border-white/10 hover:border-primary/40 hover:bg-white/8"}`}
                         onClick={() => { const id = activeQuiz.questions[currentQuestionIdx].id; const next = { ...answersRef.current, [id]: opt }; answersRef.current = next; setAnswers(next); }}
                       >
                         <span className="text-slate-400 font-mono mr-2 text-xs">{String.fromCharCode(65 + i)}.</span>{opt}
@@ -319,7 +319,7 @@ export default function QuizPage() {
 
         {state === "results" && quizResult && (
           <div className="space-y-6 animate-in zoom-in-95 duration-500">
-            <div className="text-center space-y-2 mb-8 glass border border-white/10 p-8 rounded-2xl shadow-sm">
+            <div className="text-center space-y-2 mb-8 glass-cyber p-8 rounded-2xl shadow-sm">
               <h2 className="text-2xl font-bold">Quiz Complete</h2>
               <div className={`text-6xl font-black my-4 ${quizResult.percent >= 80 ? "text-gradient-premium" : quizResult.percent >= 50 ? "text-primary" : "text-destructive"}`}>
                 {Math.round(quizResult.percent)}%
@@ -351,7 +351,7 @@ export default function QuizPage() {
                         <p className="text-primary font-medium">{res.correctAnswer}</p>
                       </div>
                     )}
-                    <div className="bg-slate-950/60 p-3 rounded-lg border border-white/10 mt-2">
+                    <div className="bg-white/4 p-3 rounded-lg border border-white/10 mt-2">
                       <span className="text-slate-400 block mb-1 text-xs uppercase tracking-wider font-semibold">Explanation</span>
                       <p>{res.explanation}</p>
                     </div>
@@ -367,7 +367,7 @@ export default function QuizPage() {
         )}
       </main>
 
-      <nav className="fixed bottom-0 inset-x-0 z-20 bg-slate-950/95 backdrop-blur-sm border-t border-white/8 flex md:hidden nav-safe">
+      <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden nav-safe">
         <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/", { replace: true })}>
           <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
         </button>

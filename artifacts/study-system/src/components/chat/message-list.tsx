@@ -313,16 +313,46 @@ export function MessageList({
         </div>
       )}
 
-      {/* Thinking dots */}
+      {/* Premium AI thinking state */}
       {isPending && !isUploading && (
         <div className="flex items-start animate-in fade-in duration-200">
-          <div className="glass border border-white/8 px-4 py-3 rounded-2xl rounded-bl-sm flex items-center gap-3 shadow-xl">
-            <div className="flex gap-1 items-center">
-              <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "0ms" }} />
-              <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "160ms" }} />
-              <span className="w-1.5 h-1.5 bg-primary/60 rounded-full animate-bounce" style={{ animationDelay: "320ms" }} />
+          <div className="bubble-ai rounded-2xl rounded-bl-sm px-4 py-3 flex items-center gap-3 shadow-xl">
+            {/* Mini mascot head — dark chassis, glowing cyan eyes */}
+            <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" className="shrink-0" aria-hidden="true">
+              <defs>
+                <radialGradient id="ti-eye" cx="50%" cy="50%" r="50%">
+                  <stop offset="0%" stopColor="#00e5ff"/>
+                  <stop offset="100%" stopColor="#0077aa"/>
+                </radialGradient>
+                <filter id="ti-glow">
+                  <feGaussianBlur stdDeviation="1.2" result="blur"/>
+                  <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+                </filter>
+              </defs>
+              {/* Cap board */}
+              <rect x="5" y="3" width="22" height="4" rx="1" fill="#312e81"/>
+              <rect x="10" y="7" width="12" height="3" rx="1" fill="#1e1b4b"/>
+              <circle cx="16" cy="3" r="1.5" fill="#00e5ff" opacity="0.9"/>
+              {/* Head */}
+              <rect x="7" y="9" width="18" height="17" rx="5" fill="#1a1535"/>
+              <rect x="7" y="9" width="18" height="17" rx="5" fill="none" stroke="rgba(56,189,248,0.3)" strokeWidth="1"/>
+              {/* Eyes glow */}
+              <ellipse cx="12" cy="17" rx="3.5" ry="3.5" fill="rgba(0,229,255,0.2)" filter="url(#ti-glow)"/>
+              <ellipse cx="20" cy="17" rx="3.5" ry="3.5" fill="rgba(0,229,255,0.2)" filter="url(#ti-glow)"/>
+              {/* Eyes */}
+              <ellipse cx="12" cy="17" rx="2.5" ry="2.4" fill="url(#ti-eye)"/>
+              <ellipse cx="20" cy="17" rx="2.5" ry="2.4" fill="url(#ti-eye)"/>
+              {/* Highlights */}
+              <ellipse cx="11.2" cy="16.2" rx="0.9" ry="0.8" fill="rgba(255,255,255,0.55)"/>
+              <ellipse cx="19.2" cy="16.2" rx="0.9" ry="0.8" fill="rgba(255,255,255,0.55)"/>
+              {/* Smile */}
+              <path d="M 12.5 22 Q 16 24.5 19.5 22" stroke="rgba(0,229,255,0.65)" strokeWidth="1.2" fill="none" strokeLinecap="round"/>
+            </svg>
+            <div className="flex gap-1.5 items-center">
+              <span className="w-2 h-2 rounded-full bg-[#00E5FF]/70 animate-bounce" style={{ animationDelay: "0ms" }} />
+              <span className="w-2 h-2 rounded-full bg-[#00E5FF]/70 animate-bounce" style={{ animationDelay: "160ms" }} />
+              <span className="w-2 h-2 rounded-full bg-[#00E5FF]/70 animate-bounce" style={{ animationDelay: "320ms" }} />
             </div>
-            <span className="italic text-xs text-slate-400">AI is thinking…</span>
           </div>
         </div>
       )}
