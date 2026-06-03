@@ -440,7 +440,7 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
         </div>
       )}
 
-      <div className="flex flex-col glass border border-white/8 rounded-2xl shadow-xl shadow-black/30 focus-within:border-primary/50 focus-within:shadow-indigo-900/20 transition-all duration-200">
+      <div className="flex flex-col glass-cyber rounded-[26px] transition-all duration-200">
         {pendingFile && (
           <div className="flex items-center gap-2 px-3 pt-2.5">
             <div className="flex items-center gap-2 bg-primary/15 border border-primary/25 text-primary rounded-lg px-3 py-1.5 text-sm max-w-full">
@@ -512,7 +512,8 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
             )}
             <Button
               size="icon"
-              className="w-8 h-8 rounded-full bg-primary hover:bg-indigo-500 text-white shadow-lg shadow-indigo-900/40 transition-all duration-150 active:scale-95 disabled:opacity-30"
+              className="w-9 h-9 rounded-full bg-primary hover:bg-indigo-400 text-white shadow-lg shadow-indigo-900/50 transition-all duration-150 active:scale-95 disabled:opacity-30"
+              style={{ boxShadow: "0 0 16px rgba(99,102,241,0.45), 0 4px 12px rgba(0,0,0,0.4)" }}
               onClick={handleSend}
               disabled={!canSend}
               title="Send (Ctrl+Enter)"

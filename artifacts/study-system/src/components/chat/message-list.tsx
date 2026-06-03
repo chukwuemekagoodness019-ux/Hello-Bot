@@ -123,14 +123,96 @@ export function MessageList({
 
   if (messages.length === 0 && !streamingMessage && !isPending) {
     return (
-      <div className="flex flex-col items-center justify-center h-full text-center space-y-4 max-w-md mx-auto">
-        <div className="w-16 h-16 rounded-2xl glass border border-white/10 flex items-center justify-center shadow-xl">
-          <span className="text-3xl">📚</span>
+      <div className="flex flex-col items-center justify-center h-full text-center gap-5 max-w-sm mx-auto px-4 pb-8">
+        {/* Mascot: dark metallic robot with glowing cyan eyes, graduation cap, headphones */}
+        <div className="relative shrink-0 select-none" aria-hidden="true">
+          <svg width="148" height="168" viewBox="0 0 160 180" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+              <linearGradient id="mg-head" x1="42" y1="44" x2="118" y2="116" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#1e1735"/>
+                <stop offset="100%" stopColor="#0d0b1a"/>
+              </linearGradient>
+              <radialGradient id="mg-eye" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="#00e5ff"/>
+                <stop offset="65%" stopColor="#009ec4"/>
+                <stop offset="100%" stopColor="#004d66"/>
+              </radialGradient>
+              <radialGradient id="mg-eyeglow" cx="50%" cy="50%" r="50%">
+                <stop offset="0%" stopColor="rgba(0,229,255,0.35)"/>
+                <stop offset="100%" stopColor="rgba(0,229,255,0)"/>
+              </radialGradient>
+              <linearGradient id="mg-body" x1="52" y1="118" x2="108" y2="168" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stopColor="#1a1730"/>
+                <stop offset="100%" stopColor="#0d0b1e"/>
+              </linearGradient>
+              <linearGradient id="mg-arm" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+                <stop offset="0%" stopColor="#18153a"/>
+                <stop offset="100%" stopColor="#0d0b1e"/>
+              </linearGradient>
+              <filter id="mg-glow">
+                <feGaussianBlur stdDeviation="3" result="blur"/>
+                <feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge>
+              </filter>
+            </defs>
+            {/* Headphone arc */}
+            <path d="M32 88 Q32 52 80 52 Q128 52 128 88" stroke="rgba(0,229,255,0.6)" strokeWidth="5" fill="none" strokeLinecap="round"/>
+            <rect x="22" y="84" width="16" height="24" rx="6" fill="rgba(0,229,255,0.12)" stroke="rgba(0,229,255,0.55)" strokeWidth="1.5"/>
+            <rect x="122" y="84" width="16" height="24" rx="6" fill="rgba(0,229,255,0.12)" stroke="rgba(0,229,255,0.55)" strokeWidth="1.5"/>
+            {/* Graduation cap — flat board */}
+            <rect x="36" y="20" width="88" height="13" rx="3" fill="#312e81"/>
+            <rect x="48" y="31" width="64" height="14" rx="3" fill="#1e1b4b"/>
+            {/* Center button */}
+            <circle cx="80" cy="20" r="4.5" fill="#00E5FF" opacity="0.9"/>
+            {/* Tassel */}
+            <line x1="114" y1="22" x2="126" y2="44" stroke="rgba(0,229,255,0.65)" strokeWidth="1.5"/>
+            <circle cx="126" cy="47" r="3.5" fill="rgba(0,229,255,0.75)"/>
+            {/* Robot head */}
+            <rect x="42" y="44" width="76" height="74" rx="17" fill="url(#mg-head)"/>
+            <rect x="42" y="44" width="76" height="74" rx="17" fill="none" stroke="rgba(56,189,248,0.22)" strokeWidth="1.5"/>
+            {/* Eye glows */}
+            <ellipse cx="64" cy="79" rx="14" ry="14" fill="url(#mg-eyeglow)" filter="url(#mg-glow)"/>
+            <ellipse cx="96" cy="79" rx="14" ry="14" fill="url(#mg-eyeglow)" filter="url(#mg-glow)"/>
+            {/* Eyes */}
+            <ellipse cx="64" cy="79" rx="9.5" ry="9" fill="url(#mg-eye)"/>
+            <ellipse cx="96" cy="79" rx="9.5" ry="9" fill="url(#mg-eye)"/>
+            {/* Eye highlights */}
+            <ellipse cx="61" cy="76" rx="3.5" ry="3" fill="rgba(255,255,255,0.48)"/>
+            <ellipse cx="93" cy="76" rx="3.5" ry="3" fill="rgba(255,255,255,0.48)"/>
+            {/* Smile */}
+            <path d="M 66 98 Q 80 110 94 98" stroke="rgba(0,229,255,0.7)" strokeWidth="2.5" fill="none" strokeLinecap="round"/>
+            {/* Body */}
+            <rect x="50" y="120" width="60" height="52" rx="13" fill="url(#mg-body)"/>
+            <rect x="50" y="120" width="60" height="52" rx="13" fill="none" stroke="rgba(56,189,248,0.18)" strokeWidth="1"/>
+            {/* Chest panel */}
+            <rect x="62" y="130" width="36" height="24" rx="5" fill="rgba(0,229,255,0.04)" stroke="rgba(56,189,248,0.22)" strokeWidth="1"/>
+            <circle cx="71" cy="142" r="4" fill="rgba(0,229,255,0.82)" filter="url(#mg-glow)"/>
+            <circle cx="80" cy="142" r="2.5" fill="rgba(99,102,241,0.8)"/>
+            <circle cx="89" cy="142" r="4" fill="rgba(0,229,255,0.82)" filter="url(#mg-glow)"/>
+            {/* Arms */}
+            <rect x="28" y="124" width="20" height="38" rx="10" fill="#18153a" stroke="rgba(56,189,248,0.14)" strokeWidth="1"/>
+            <rect x="112" y="124" width="20" height="38" rx="10" fill="#18153a" stroke="rgba(56,189,248,0.14)" strokeWidth="1"/>
+          </svg>
+          {/* Subtle glow halo behind mascot */}
+          <div className="absolute inset-0 -z-10 blur-3xl opacity-30" style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(0,229,255,0.35) 0%, transparent 70%)" }} />
         </div>
-        <p className="text-xl font-semibold text-slate-100">Ready to study?</p>
-        <p className="text-sm text-slate-400 leading-relaxed">
-          Ask a question, upload your notes or PDF, or take a quick quiz.
-        </p>
+
+        <div className="space-y-2">
+          <p className="text-2xl font-bold tracking-tight">
+            <span className="text-neon-cyan">Hello!</span>{" "}
+            <span className="text-slate-100">I'm your AI Study Buddy.</span>
+          </p>
+          <p className="text-sm text-slate-400 leading-relaxed">
+            Ask a question, upload your notes or PDF, or take a quick quiz.
+          </p>
+        </div>
+
+        <div className="flex flex-wrap justify-center gap-2 mt-1">
+          {["📝 Explain a concept", "📄 Upload my notes", "🎯 Quiz me now"].map((chip) => (
+            <span key={chip} className="text-xs px-3 py-1.5 rounded-full border border-white/10 text-slate-400 bg-white/[0.04] select-none">
+              {chip}
+            </span>
+          ))}
+        </div>
       </div>
     );
   }
@@ -169,7 +251,7 @@ export function MessageList({
             className={`max-w-[88%] min-w-0 overflow-hidden px-4 py-3 rounded-2xl ${
               msg.role === "user"
                 ? "bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-700 text-white rounded-br-sm shadow-lg shadow-indigo-900/40 ring-1 ring-white/10"
-                : "glass-premium border border-white/10 rounded-bl-sm shadow-xl shadow-black/40"
+                : "bubble-ai rounded-bl-sm shadow-xl shadow-black/40"
             }`}
           >
             {msg.role === "user" ? (
@@ -210,7 +292,7 @@ export function MessageList({
       {/* Live streaming message */}
       {streamingMessage !== undefined && streamingMessage.length > 0 && (
         <div className="flex flex-col items-start animate-in fade-in duration-200 min-w-0">
-          <div className="max-w-[88%] min-w-0 overflow-hidden px-4 py-3 rounded-2xl glass-premium border border-white/10 rounded-bl-sm shadow-xl shadow-black/40">
+          <div className="max-w-[88%] min-w-0 overflow-hidden px-4 py-3 rounded-2xl bubble-ai rounded-bl-sm shadow-xl shadow-black/40">
             <MarkdownContent content={streamingMessage} />
             <span className="inline-block w-0.5 h-4 bg-primary/70 ml-0.5 animate-pulse align-text-bottom" />
           </div>

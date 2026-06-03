@@ -381,7 +381,7 @@ export default function ChatPage() {
       : undefined;
 
   return (
-    <div className="flex h-full w-full bg-background text-foreground overflow-hidden">
+    <div className="flex h-full w-full chat-page-bg text-foreground overflow-hidden">
       {sidebarOpen && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 transition-all duration-300 md:hidden"
