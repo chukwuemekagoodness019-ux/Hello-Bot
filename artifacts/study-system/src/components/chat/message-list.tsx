@@ -1,9 +1,11 @@
 import { useRef, useEffect, useState } from "react";
+import { useLocation } from "wouter";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
-import { Volume2, AlertCircle, RefreshCw, Square } from "lucide-react";
+import { Volume2, AlertCircle, RefreshCw, Square, Target, Loader2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import type { ChatMessage } from "@/hooks/use-chat-history";
+import { useToast } from "@/hooks/use-toast";
 
 interface MessageListProps {
   messages: ChatMessage[];
@@ -41,6 +43,87 @@ function getVoice(gender: VoiceGender): SpeechSynthesisVoice | null {
     );
   }
   return voices[0] ?? null;
+}
+
+const BASE = import.meta.env.BASE_URL as string;
+const QUIZ_BRIDGE_REGEX = /\[TRIGGER_QUIZ_BRIDGE:\s*([^\]]+)\]\s*$/i;
+
+function parseQuizBridge(content: string): { text: string; topic: string | null } {
+  const match = QUIZ_BRIDGE_REGEX.exec(content);
+  if (!match) return { text: content, topic: null };
+  return {
+    text: content.slice(0, match.index).trimEnd(),
+    topic: match[1].trim(),
+  };
+}
+
+function QuizBridgeCard({ topic }: { topic: string }) {
+  const [, setLocation] = useLocation();
+  const { toast } = useToast();
+  const [loading, setLoading] = useState(false);
+
+  const handleGenerate = async () => {
+    setLoading(true);
+    try {
+      const res = await fetch(`${BASE}api/quiz/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          subject: topic,
+          difficulty: "medium",
+          questionType: "objective",
+          numQuestions: 3,
+          timeMinutes: 5,
+        }),
+      });
+      if (res.status === 402) {
+        toast({ title: "Daily quiz limit reached — upgrade to Premium for unlimited quizzes.", variant: "destructive" });
+        return;
+      }
+      if (!res.ok) throw new Error("Generation failed");
+      const quiz = await res.json();
+      sessionStorage.setItem("quizBridgeData", JSON.stringify(quiz));
+      setLocation("/quiz");
+    } catch {
+      toast({ title: "Could not generate quiz. Please try again.", variant: "destructive" });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 w-full max-w-[88%] rounded-2xl border border-indigo-500/25 bg-gradient-to-br from-indigo-950/60 to-indigo-900/30 backdrop-blur-sm px-4 py-4 shadow-lg shadow-indigo-950/30 animate-in fade-in slide-in-from-bottom-2 duration-400">
+      <div className="flex items-start gap-3">
+        <div className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl bg-indigo-500/15 ring-1 ring-indigo-500/30">
+          <Target className="h-4 w-4 text-indigo-400" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-[10px] font-semibold uppercase tracking-widest text-indigo-400 mb-1">Professor's Recommendation</p>
+          <p className="text-sm text-slate-300 leading-relaxed">
+            Your concept retention for <span className="font-semibold text-indigo-300">{topic}</span> can be locked in with a quick review. Tap below to generate a 3-question mastery check.
+          </p>
+        </div>
+      </div>
+      <button
+        onClick={handleGenerate}
+        disabled={loading}
+        className="mt-3 w-full flex items-center justify-center gap-2 rounded-xl bg-indigo-600/80 hover:bg-indigo-500/90 disabled:opacity-50 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 active:scale-[0.98] shadow-md shadow-indigo-900/40 ring-1 ring-indigo-500/40"
+      >
+        {loading ? (
+          <>
+            <Loader2 className="h-3.5 w-3.5 animate-spin" />
+            Generating Quiz…
+          </>
+        ) : (
+          <>
+            <Target className="h-3.5 w-3.5" />
+            Generate Quick Mastery Quiz
+          </>
+        )}
+      </button>
+    </div>
+  );
 }
 
 function MarkdownContent({ content }: { content: string }) {
@@ -240,60 +323,66 @@ export function MessageList({
         </div>
       )}
 
-      {messages.map((msg, idx) => (
-        <div
-          key={idx}
-          className={`flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300 min-w-0 ${
-            msg.role === "user" ? "items-end" : "items-start"
-          }`}
-        >
+      {messages.map((msg, idx) => {
+        const { text: displayContent, topic: bridgeTopic } =
+          msg.role === "assistant" ? parseQuizBridge(msg.content) : { text: msg.content, topic: null };
+        return (
           <div
-            className={`max-w-[88%] min-w-0 overflow-hidden px-4 py-3 rounded-2xl ${
-              msg.role === "user"
-                ? "bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-700 text-white rounded-br-sm shadow-lg shadow-indigo-900/40 ring-1 ring-white/10"
-                : "bubble-ai rounded-bl-sm shadow-xl shadow-black/40"
+            key={idx}
+            className={`flex flex-col animate-in fade-in slide-in-from-bottom-2 duration-300 min-w-0 ${
+              msg.role === "user" ? "items-end" : "items-start"
             }`}
           >
-            {msg.role === "user" ? (
-              <div className="whitespace-pre-wrap text-sm leading-relaxed text-white break-words [overflow-wrap:anywhere]">
-                {msg.content}
-              </div>
-            ) : (
-              <MarkdownContent content={msg.content} />
-            )}
-          </div>
-
-          {msg.role === "assistant" && (
-            <button
-              className={`mt-1 flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs transition-all duration-150 ${
-                speakingIdx === idx
-                  ? "text-primary bg-primary/15"
-                  : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
+            <div
+              className={`max-w-[88%] min-w-0 overflow-hidden px-4 py-3 rounded-2xl ${
+                msg.role === "user"
+                  ? "bg-gradient-to-br from-indigo-500 via-indigo-600 to-violet-700 text-white rounded-br-sm shadow-lg shadow-indigo-900/40 ring-1 ring-white/10"
+                  : "bubble-ai rounded-bl-sm shadow-xl shadow-black/40"
               }`}
-              onClick={() => handleTTS(msg.content, idx)}
-              title={speakingIdx === idx ? "Stop" : "Listen"}
             >
-              {speakingIdx === idx ? (
-                <>
-                  <Square className="w-3 h-3 fill-current" />
-                  <span>Stop</span>
-                </>
+              {msg.role === "user" ? (
+                <div className="whitespace-pre-wrap text-sm leading-relaxed text-white break-words [overflow-wrap:anywhere]">
+                  {msg.content}
+                </div>
               ) : (
-                <>
-                  <Volume2 className="w-3 h-3" />
-                  <span>Listen</span>
-                </>
+                <MarkdownContent content={displayContent} />
               )}
-            </button>
-          )}
-        </div>
-      ))}
+            </div>
+
+            {msg.role === "assistant" && (
+              <button
+                className={`mt-1 flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs transition-all duration-150 ${
+                  speakingIdx === idx
+                    ? "text-primary bg-primary/15"
+                    : "text-slate-500 hover:text-slate-300 hover:bg-white/5"
+                }`}
+                onClick={() => handleTTS(displayContent, idx)}
+                title={speakingIdx === idx ? "Stop" : "Listen"}
+              >
+                {speakingIdx === idx ? (
+                  <>
+                    <Square className="w-3 h-3 fill-current" />
+                    <span>Stop</span>
+                  </>
+                ) : (
+                  <>
+                    <Volume2 className="w-3 h-3" />
+                    <span>Listen</span>
+                  </>
+                )}
+              </button>
+            )}
+
+            {bridgeTopic && <QuizBridgeCard topic={bridgeTopic} />}
+          </div>
+        );
+      })}
 
       {/* Live streaming message */}
       {streamingMessage !== undefined && streamingMessage.length > 0 && (
         <div className="flex flex-col items-start animate-in fade-in duration-200 min-w-0">
           <div className="max-w-[88%] min-w-0 overflow-hidden px-4 py-3 rounded-2xl bubble-ai rounded-bl-sm shadow-xl shadow-black/40">
-            <MarkdownContent content={streamingMessage} />
+            <MarkdownContent content={parseQuizBridge(streamingMessage).text} />
             <span className="inline-block w-0.5 h-4 bg-primary/70 ml-0.5 animate-pulse align-text-bottom" />
           </div>
         </div>

@@ -41,6 +41,35 @@ export default function QuizPage() {
 
   useEffect(() => () => { if (timerRef.current) clearInterval(timerRef.current); }, []);
 
+  // Quiz Bridge: auto-start a quiz handed off from the Chat module via sessionStorage
+  useEffect(() => {
+    const raw = sessionStorage.getItem("quizBridgeData");
+    if (!raw) return;
+    sessionStorage.removeItem("quizBridgeData");
+    try {
+      const quiz = JSON.parse(raw) as Quiz;
+      setSubject(quiz.subject ?? "");
+      setActiveQuiz(quiz);
+      setAnswers({});
+      answersRef.current = {};
+      setCurrentQuestionIdx(0);
+      setTimeLeft((quiz.timeMinutes ?? 5) * 60);
+      setState("running");
+      timerRef.current = setInterval(() => {
+        setTimeLeft((prev) => {
+          if (prev <= 1) {
+            if (timerRef.current) clearInterval(timerRef.current);
+            handleAutoSubmit(quiz);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } catch {
+      // Corrupted bridge data — silently ignore
+    }
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
   const handleGenerate = (e: React.FormEvent) => {
     e.preventDefault();
     if (!subject) { toast({ title: "Subject required" }); return; }
