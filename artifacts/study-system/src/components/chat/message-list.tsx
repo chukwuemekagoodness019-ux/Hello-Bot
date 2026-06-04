@@ -14,6 +14,8 @@ interface MessageListProps {
   streamingMessage?: string;
   error?: string | null;
   onRetry?: () => void;
+  streak?: number;
+  lastStudied?: { subject: string; date: string } | null;
 }
 
 type VoiceGender = "default" | "female" | "male";
@@ -126,6 +128,18 @@ function QuizBridgeCard({ topic }: { topic: string }) {
   );
 }
 
+function buildMemoryLine(subject: string, dateStr: string): string {
+  try {
+    const diffDays = Math.floor((Date.now() - new Date(dateStr).getTime()) / 86_400_000);
+    if (diffDays <= 0) return `You studied ${subject} today. Keep the momentum going!`;
+    if (diffDays === 1) return `You last reviewed ${subject} yesterday. Let's build on that foundation today.`;
+    if (diffDays <= 7) return `You last reviewed ${subject} ${diffDays} days ago. Time to reinforce before it fades.`;
+    return `You last studied ${subject} over a week ago. A quick review session will do wonders.`;
+  } catch {
+    return "";
+  }
+}
+
 function MarkdownContent({ content }: { content: string }) {
   return (
     <div className="ai-prose max-w-none">
@@ -141,6 +155,8 @@ export function MessageList({
   streamingMessage,
   error,
   onRetry,
+  streak,
+  lastStudied,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
@@ -279,11 +295,27 @@ export function MessageList({
           <div className="absolute inset-0 -z-10 blur-3xl opacity-30" style={{ background: "radial-gradient(ellipse at 50% 60%, rgba(0,229,255,0.35) 0%, transparent 70%)" }} />
         </div>
 
+        {(streak ?? 0) >= 2 && (
+          <div
+            className="flex items-center gap-2 rounded-full px-4 py-2 border border-orange-500/25 bg-orange-500/8 shadow-sm"
+            style={{ boxShadow: "0 0 14px rgba(249,115,22,0.12)" }}
+          >
+            <span className="text-lg leading-none select-none" aria-hidden="true">🔥</span>
+            <span className="text-sm font-bold text-orange-400">{streak}-Day Study Streak</span>
+          </div>
+        )}
+
         <div className="space-y-2">
           <p className="text-2xl font-bold tracking-tight">
             <span className="text-neon-cyan">Hello!</span>{" "}
             <span className="text-slate-100">I'm your AI Study Buddy.</span>
           </p>
+          {lastStudied && (() => {
+            const line = buildMemoryLine(lastStudied.subject, lastStudied.date);
+            return line ? (
+              <p className="text-xs text-slate-500 leading-relaxed">{line}</p>
+            ) : null;
+          })()}
           <p className="text-sm text-slate-400 leading-relaxed">
             Ask a question, upload your notes or PDF, or take a quick quiz.
           </p>

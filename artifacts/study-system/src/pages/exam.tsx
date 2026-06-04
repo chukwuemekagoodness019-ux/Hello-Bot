@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import {
   ChevronLeft, Clock, Trophy, CheckCircle, XCircle, FileText,
-  MessageSquare, GraduationCap, Lock, Copy, Share2, Link2,
+  MessageSquare, GraduationCap, Lock, Copy, Share2, Link2, Brain,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -65,6 +65,29 @@ function saveExamResult(result: {
     existing.unshift(result);
     localStorage.setItem(EXAM_RESULTS_KEY, JSON.stringify(existing.slice(0, 20)));
   } catch {}
+}
+
+// ---- Exam Readiness Index helpers (pure, zero network cost) ----
+
+function computeERI(percent: number, difficulty: "easy" | "medium" | "hard"): number {
+  const mult = difficulty === "easy" ? 0.85 : difficulty === "hard" ? 1.15 : 1.0;
+  return Math.min(100, Math.max(0, Math.round(percent * mult)));
+}
+
+function eriInfo(eri: number): { label: string; color: string } {
+  if (eri >= 90) return { label: "Exam Ready", color: "#34d399" };
+  if (eri >= 75) return { label: "Highly Competent", color: "#10b981" };
+  if (eri >= 60) return { label: "Competent", color: "#06b6d4" };
+  if (eri >= 45) return { label: "Approaching Ready", color: "#f59e0b" };
+  if (eri >= 30) return { label: "Developing Readiness", color: "#f97316" };
+  return { label: "Needs More Preparation", color: "#ef4444" };
+}
+
+function extractConcept(prompt: string): string {
+  const clean = prompt.replace(/^\d+[.)]\s*/, "").trim();
+  const words = clean.split(/\s+/);
+  if (words.length <= 8) return clean;
+  return words.slice(0, 7).join(" ") + "…";
 }
 
 export default function ExamPage() {
@@ -425,6 +448,27 @@ export default function ExamPage() {
 
   const answeredCount = Object.values(answers).filter((a) => a.trim() !== "").length;
   const totalQuestions = activeQuiz?.questions.length ?? 0;
+
+  // ERI diagnostics — pure computation, safe on every render, zero cost when quizResult is null
+  const eri = quizResult ? computeERI(quizResult.percent, activeQuiz?.difficulty ?? "medium") : 0;
+  const eriData = eriInfo(eri);
+  const masteredConcepts = quizResult
+    ? quizResult.results.filter((r) => r.isCorrect).map((r) => extractConcept(r.prompt))
+    : [];
+  const focusAreas = quizResult
+    ? quizResult.results.filter((r) => !r.isCorrect).map((r) => extractConcept(r.prompt))
+    : [];
+
+  const handleCoachMe = () => {
+    if (!quizResult || !activeQuiz) return;
+    const topics = quizResult.results
+      .filter((r) => !r.isCorrect)
+      .map((r) => extractConcept(r.prompt))
+      .join(", ");
+    const prompt = `I just finished an exam simulation on "${activeQuiz.subject}" and struggled with: ${topics}. Please provide a targeted breakdown of these specific topics.`;
+    sessionStorage.setItem("examWeakSpotsPrompt", prompt);
+    setLocation("/");
+  };
 
   const getTimerColor = () =>
     !enableTimer || timeLeft > 300
@@ -883,55 +927,137 @@ export default function ExamPage() {
         )}
 
         {state === "results" && quizResult && (
-          <div className="space-y-6 animate-in zoom-in-95 duration-500">
-            <div className="text-center space-y-2 p-8 glass-cyber rounded-2xl shadow-sm">
-              <div className="flex items-center justify-center gap-2 mb-3 text-primary">
-                <Trophy className="w-6 h-6" /><h2 className="text-2xl font-bold">Exam Complete</h2>
-              </div>
-              <div className={`text-7xl font-black my-4 ${quizResult.percent >= 50 ? "text-primary" : "text-destructive"}`}>
-                {Math.round(quizResult.percent)}%
-              </div>
-              <p className="text-slate-400 text-lg">{quizResult.score} correct out of {quizResult.total}</p>
-              {quizResult.percent < 50 && (
-                <p className="text-sm text-slate-400 mt-2 italic">Don't be discouraged — every attempt teaches you something. Review the explanations and try again! 💪</p>
-              )}
-              {quizResult.percent >= 80 && (
-                <p className="text-sm text-primary font-medium mt-2">Excellent work! You're mastering this topic! 🎉</p>
-              )}
-              <div className="flex justify-center gap-6 mt-4 text-sm">
-                <div className="flex items-center gap-1.5 text-primary"><CheckCircle className="w-4 h-4" /><span className="font-semibold">{quizResult.score} Correct</span></div>
-                <div className="flex items-center gap-1.5 text-destructive"><XCircle className="w-4 h-4" /><span className="font-semibold">{quizResult.total - quizResult.score} Wrong</span></div>
+          <div className="space-y-5 animate-in zoom-in-95 duration-500">
+
+            {/* ERI Hero Card */}
+            <div
+              className="relative overflow-hidden rounded-2xl border border-cyan-500/15 shadow-xl shadow-black/40"
+              style={{ background: "rgba(15, 12, 30, 0.65)", backdropFilter: "blur(12px)" }}
+            >
+              <div className="absolute inset-0 bg-gradient-to-br from-indigo-950/40 via-transparent to-cyan-950/20 pointer-events-none" />
+              <div className="relative p-6 text-center">
+                <div className="flex items-center justify-center gap-2 mb-5">
+                  <Trophy className="w-4 h-4 text-cyan-400" />
+                  <span className="text-[10px] font-semibold uppercase tracking-widest text-cyan-400">AI Exam Readiness Index</span>
+                </div>
+                <div className="relative mx-auto mb-2" style={{ width: 160, height: 90 }}>
+                  <svg width="160" height="90" viewBox="0 0 160 90" className="overflow-visible">
+                    <path d="M 12 80 A 68 68 0 0 1 148 80" fill="none" stroke="rgba(255,255,255,0.06)" strokeWidth="12" strokeLinecap="round" />
+                    <path
+                      d="M 12 80 A 68 68 0 0 1 148 80"
+                      fill="none"
+                      stroke={eriData.color}
+                      strokeWidth="12"
+                      strokeLinecap="round"
+                      strokeDasharray={`${(eri / 100) * 214} 214`}
+                      style={{ filter: `drop-shadow(0 0 6px ${eriData.color}80)` }}
+                    />
+                  </svg>
+                  <div className="absolute inset-0 flex flex-col items-center justify-end pb-2">
+                    <span className="text-5xl font-black leading-none" style={{ color: eriData.color }}>{eri}</span>
+                    <span className="text-slate-500 text-xs font-medium mt-0.5">/ 100</span>
+                  </div>
+                </div>
+                <p className="text-xl font-bold text-slate-100 mb-1">{eriData.label}</p>
+                <p className="text-sm text-slate-400 mb-4">
+                  {quizResult.score} of {quizResult.total} correct ·{" "}
+                  <span className="capitalize">{activeQuiz?.difficulty ?? "medium"}</span> difficulty
+                </p>
+                <div className="flex justify-center gap-6 text-sm">
+                  <div className="flex items-center gap-1.5 text-emerald-400">
+                    <CheckCircle className="w-4 h-4" /><span className="font-semibold">{quizResult.score} Mastered</span>
+                  </div>
+                  <div className="flex items-center gap-1.5 text-amber-400">
+                    <XCircle className="w-4 h-4" /><span className="font-semibold">{quizResult.total - quizResult.score} To Review</span>
+                  </div>
+                </div>
               </div>
             </div>
 
-            {showAnswers && (
-              <div className="space-y-4">
-                <h3 className="font-semibold text-lg">Answer Breakdown</h3>
-                {quizResult.results.map((res, i) => (
-                  <div key={i} className={`p-4 rounded-xl border shadow-sm ${res.isCorrect ? "bg-primary/5 border-primary/20" : "bg-destructive/5 border-destructive/20"}`}>
-                    <div className="flex gap-2 items-start mb-2">
-                      <span className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0 mt-0.5 ${res.isCorrect ? "bg-primary text-primary-foreground" : "bg-destructive text-destructive-foreground"}`}>{i + 1}</span>
-                      <h4 className="font-medium text-sm leading-relaxed">{res.prompt}</h4>
-                    </div>
-                    <div className="pl-8 space-y-2 text-sm">
-                      <div>
-                        <span className="text-slate-400 text-xs uppercase tracking-wide">Your Answer: </span>
-                        <span className={res.isCorrect ? "text-primary font-medium" : "text-destructive font-medium"}>{res.userAnswer || "No answer"}</span>
-                      </div>
-                      {!res.isCorrect && (
-                        <div>
-                          <span className="text-slate-400 text-xs uppercase tracking-wide">Correct Answer: </span>
-                          <span className="text-primary font-medium">{res.correctAnswer}</span>
-                        </div>
-                      )}
-                      <div className="bg-slate-950/60 p-3 rounded-lg border border-white/10">
-                        <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold block mb-1">Explanation</span>
-                        <p className="leading-relaxed">{res.explanation}</p>
-                      </div>
-                    </div>
+            {/* Mastered vs Critical Focus Table */}
+            <div
+              className="rounded-2xl border border-cyan-500/15 overflow-hidden shadow-lg"
+              style={{ background: "rgba(15, 12, 30, 0.65)", backdropFilter: "blur(12px)" }}
+            >
+              <div className="grid grid-cols-2 divide-x divide-white/8">
+                <div className="p-4">
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" style={{ boxShadow: "0 0 6px rgba(52,211,153,0.7)" }} />
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-emerald-400">Mastered Concepts</span>
                   </div>
-                ))}
+                  <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                    {masteredConcepts.length === 0 ? (
+                      <p className="text-xs text-slate-500 italic">None yet</p>
+                    ) : masteredConcepts.map((c, i) => (
+                      <div key={i} className="text-xs text-emerald-300/80 bg-emerald-500/5 border border-emerald-500/15 rounded-lg px-2.5 py-1.5 leading-snug">
+                        {c}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <div className="p-4">
+                  <div className="flex items-center gap-1.5 mb-3">
+                    <span className="w-2 h-2 rounded-full bg-amber-400 shrink-0" style={{ boxShadow: "0 0 6px rgba(251,191,36,0.7)" }} />
+                    <span className="text-[10px] font-semibold uppercase tracking-wider text-amber-400">Critical Focus Areas</span>
+                  </div>
+                  <div className="space-y-1.5 max-h-52 overflow-y-auto">
+                    {focusAreas.length === 0 ? (
+                      <p className="text-xs text-emerald-400 italic font-medium">Perfect score! 🎉</p>
+                    ) : focusAreas.map((c, i) => (
+                      <div key={i} className="text-xs text-amber-300/80 bg-amber-500/5 border border-amber-500/15 rounded-lg px-2.5 py-1.5 leading-snug">
+                        {c}
+                      </div>
+                    ))}
+                  </div>
+                </div>
               </div>
+              {focusAreas.length > 0 && (
+                <div className="p-4 border-t border-white/8">
+                  <button
+                    onClick={handleCoachMe}
+                    className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-violet-600/80 to-indigo-600/80 hover:from-violet-500/90 hover:to-indigo-500/90 px-4 py-3 text-sm font-semibold text-white transition-all duration-150 active:scale-[0.98] shadow-md shadow-indigo-900/40 ring-1 ring-indigo-500/30"
+                  >
+                    <Brain className="h-4 w-4" />
+                    Coach Me on My Weak Spots
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Full answer breakdown — collapsible to keep the page clean */}
+            {showAnswers && quizResult.results.length > 0 && (
+              <details>
+                <summary className="cursor-pointer list-none flex items-center justify-between py-3 px-4 glass-cyber rounded-xl border border-white/10 select-none hover:border-white/20 transition-colors">
+                  <span className="text-sm font-medium text-slate-300">Full Answer Breakdown</span>
+                  <span className="text-xs text-slate-500">{quizResult.results.length} questions · tap to expand</span>
+                </summary>
+                <div className="space-y-3 pt-3">
+                  {quizResult.results.map((res, i) => (
+                    <div key={i} className={`p-4 rounded-xl border shadow-sm ${res.isCorrect ? "bg-primary/5 border-primary/20" : "bg-destructive/5 border-destructive/20"}`}>
+                      <div className="flex gap-2 items-start mb-2">
+                        <span className={`flex items-center justify-center w-6 h-6 rounded-full text-xs font-bold shrink-0 mt-0.5 ${res.isCorrect ? "bg-primary text-primary-foreground" : "bg-destructive text-destructive-foreground"}`}>{i + 1}</span>
+                        <h4 className="font-medium text-sm leading-relaxed">{res.prompt}</h4>
+                      </div>
+                      <div className="pl-8 space-y-2 text-sm">
+                        <div>
+                          <span className="text-slate-400 text-xs uppercase tracking-wide">Your Answer: </span>
+                          <span className={res.isCorrect ? "text-primary font-medium" : "text-destructive font-medium"}>{res.userAnswer || "No answer"}</span>
+                        </div>
+                        {!res.isCorrect && (
+                          <div>
+                            <span className="text-slate-400 text-xs uppercase tracking-wide">Correct Answer: </span>
+                            <span className="text-primary font-medium">{res.correctAnswer}</span>
+                          </div>
+                        )}
+                        <div className="bg-slate-950/60 p-3 rounded-lg border border-white/10">
+                          <span className="text-slate-400 text-xs uppercase tracking-wider font-semibold block mb-1">Explanation</span>
+                          <p className="leading-relaxed">{res.explanation}</p>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </details>
             )}
 
             <Button className="w-full h-12 text-base" onClick={() => { setState("form"); setQuizResult(null); setActiveQuiz(null); }}>

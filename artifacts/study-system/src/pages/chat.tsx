@@ -40,6 +40,22 @@ export default function ChatPage() {
   // Rolling summarization: don't run two summarisations at once.
   const summaryInProgressRef = useRef(false);
 
+  // Exam coaching handoff: read once on mount if user navigated here from exam results
+  const [pendingExamPrompt] = useState<string | null>(() => {
+    const p = sessionStorage.getItem("examWeakSpotsPrompt");
+    if (p) sessionStorage.removeItem("examWeakSpotsPrompt");
+    return p || null;
+  });
+  const pendingFiredRef = useRef(false);
+
+  // Last studied subject from exam localStorage history — used by welcome state
+  const [lastStudied] = useState<{ subject: string; date: string } | null>(() => {
+    try {
+      const h = JSON.parse(localStorage.getItem("exam_history") || "[]") as Array<{ subject: string; date: string }>;
+      return h.length > 0 ? { subject: h[0].subject, date: h[0].date } : null;
+    } catch { return null; }
+  });
+
   // -------------------------------------------------------------------------
   // Core streaming fetch — calls /api/chat/stream, updates streamingContent.
   // Returns full assembled text on success or empty string on failure.
@@ -233,6 +249,15 @@ export default function ChatPage() {
     },
     [compressConversation],
   );
+
+  // Fire pending exam coaching prompt once user data arrives (safe forward ref — fires after render)
+  useEffect(() => {
+    if (!pendingExamPrompt || !user || pendingFiredRef.current) return;
+    pendingFiredRef.current = true;
+    const timer = setTimeout(() => void handleSend(pendingExamPrompt), 600);
+    return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [user, pendingExamPrompt]);
 
   // -------------------------------------------------------------------------
   // Send a text message — async so we can await the stream and then check
@@ -518,6 +543,8 @@ export default function ChatPage() {
             streamingMessage={activeStreamingContent}
             error={localError}
             onRetry={handleRetry}
+            streak={user?.streak?.currentStreak}
+            lastStudied={lastStudied}
           />
         </div>
 
