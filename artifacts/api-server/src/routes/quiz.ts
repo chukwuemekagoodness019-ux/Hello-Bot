@@ -7,6 +7,7 @@ import { isFlagEnabled } from "../lib/flags";
 import crypto from "node:crypto";
 import { quizStore, gcQuizzes, setExam, updateSubmittedUsers, deleteQuiz } from "../lib/exam-store";
 import { canCreateExam } from "../lib/exam-limits";
+import { scheduleReview } from "../lib/review-schedule";
 
 const router: IRouter = Router();
 
@@ -206,6 +207,9 @@ router.post("/exam/submit", sessionMiddleware, async (req, res, next) => {
     const newBestScore = Math.max(u.bestScore, percent);
     await updateUser(u.id, { currentStreak: newCurrent, bestStreak: newBestStreak, bestScore: newBestScore, lastActiveDate: today });
 
+    // Schedule spaced repetition review reminders (24h, 3-day, 7-day) — non-blocking
+    scheduleReview(u.id, subject);
+
     res.json({ quizId, score, total, percent, results, streak: { currentStreak: newCurrent, bestStreak: newBestStreak, bestScore: newBestScore } });
   } catch (err) { next(err); }
 });
@@ -251,6 +255,10 @@ router.post("/quiz/submit", sessionMiddleware, async (req, res, next) => {
     await updateUser(u.id, { currentStreak: newCurrent, bestStreak: newBestStreak, bestScore: newBestScore, lastActiveDate: today });
     await insertQuizAttempt({ userId: u.id, subject, score, total, percent });
     deleteQuiz(quizId);
+
+    // Schedule spaced repetition review reminders (24h, 3-day, 7-day) — non-blocking
+    scheduleReview(u.id, subject);
+
     res.json({ quizId, score, total, percent, results, streak: { currentStreak: newCurrent, bestStreak: newBestStreak, bestScore: newBestScore } });
   } catch (err) { next(err); }
 });

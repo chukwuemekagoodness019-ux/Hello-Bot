@@ -17,10 +17,15 @@ tryProvider() fast-fails on isAuthError || isQuota || isRateLimited — skips re
 
 ## System Prompt & File Context
 buildSystemPrompt() wraps SYSTEM_PROMPT_BASE with a live date header.
+SYSTEM_PROMPT_BASE now defines an elite Ivy-League academic coach persona (not a chatbot): Socratic method, markdown tables for structure, layered depth, subject-specific rigor protocols, Uncertainty Protocol (never assert unverified facts), and calibrated motivation. Quiz Redirect Rule is NON-NEGOTIABLE.
 buildOpenAIMessages() merges all [FILE_CONTEXT] system messages from the conversation INTO the system prompt (not as separate user turns). Previous design put them as user-role messages creating consecutive user messages that confused models. Correct pattern:
   systemContent = buildSystemPrompt() + "\n\n---\n**Uploaded File Context**\n\n" + contextMessages.map(m => m.content).join(...)
   Then conversationMessages (user/assistant only) follow in order.
 This ensures PDF and image context always reaches the AI at highest priority for ALL follow-up questions.
+
+## Spaced Repetition Notification Hook
+lib/review-schedule.ts: lightweight in-memory scheduler. scheduleReview(userId, subject) called (fire-and-forget synchronous) after both quiz/submit and exam/submit success. Stores 3 entries per completion: 24h, 3-day, 7-day intervals. Capped at 30 entries per user.
+Delivery: checkAndDispatchDueReviews(userId, sendAdminMessage) called as void fire-and-forget at the TOP of GET /api/user/messages handler (before getUserMessages). When entries are due, dispatches via sendAdminMessage with from_admin:"system" — frontend bell icon picks them up automatically. No new routes, no new DB tables, no new UI.
 
 ## Auth
 HMAC-SHA256 signed session cookies. SESSION_SECRET env var (defaults to dev string — must be set in Render prod). secure: only in production. sameSite: lax.
