@@ -437,7 +437,7 @@ export default function ExamPage() {
   const userLoaded = user !== undefined;
 
   const BottomNav = () => (
-    <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden nav-safe">
+    <nav className="fixed bottom-0 inset-x-0 z-20 border-t border-white/8 flex md:hidden nav-safe" style={{ background: "rgba(9,5,20,0.98)" }}>
       <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
         <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
       </button>

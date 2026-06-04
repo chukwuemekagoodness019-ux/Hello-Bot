@@ -149,7 +149,7 @@ export default function QuizPage() {
           <h2 className="text-xl font-bold mb-2 text-white">Quiz Unavailable</h2>
           <p className="text-slate-400 text-sm">This feature is temporarily unavailable. Please check back later.</p>
         </main>
-        <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden nav-safe">
+        <nav className="fixed bottom-0 inset-x-0 z-20 border-t border-white/8 flex md:hidden nav-safe" style={{ background: "rgba(9,5,20,0.98)" }}>
           <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/", { replace: true })}>
             <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
           </button>
@@ -367,7 +367,7 @@ export default function QuizPage() {
         )}
       </main>
 
-      <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden nav-safe">
+      <nav className="fixed bottom-0 inset-x-0 z-20 border-t border-white/8 flex md:hidden nav-safe" style={{ background: "rgba(9,5,20,0.98)" }}>
         <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/", { replace: true })}>
           <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
         </button>

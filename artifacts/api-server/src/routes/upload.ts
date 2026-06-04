@@ -101,12 +101,12 @@ router.post("/upload", sessionMiddleware, upload.single("file"), async (req, res
       kind = "pdf";
       let extractedText = "";
       try {
-        if (typeof (globalThis as any).DOMMatrix === "undefined") {
-          (globalThis as any).DOMMatrix = class {};
-        }
-        const pdfModule = await import("pdf-parse");
+        // Import the internal module directly to bypass pdf-parse's root
+        // index.js which reads a test PDF at startup and can fail when the
+        // process working directory doesn't match the package root.
+        const pdfModule = await import("pdf-parse/lib/pdf-parse.js" as string);
         const pdfParse = (pdfModule as any).default ?? pdfModule;
-        const data = await pdfParse(file.buffer);
+        const data = await pdfParse(Buffer.from(file.buffer));
         extractedText = (data.text ?? "").trim();
       } catch (err) {
         pushError({ ts: new Date().toISOString(), provider: "pdf-parse", stage: "pdf_upload", message: err instanceof Error ? err.message : String(err) });

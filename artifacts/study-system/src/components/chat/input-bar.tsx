@@ -45,6 +45,11 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
   const manualStopRef = useRef<boolean>(false);
   const restartTimeRef = useRef<number>(0);
   const restartBaseRef = useRef<string>("");
+  // Tracks the full text visible to the user (finals + current interim).
+  // Used as the echo-suppression snapshot on auto-restart so that words
+  // which were interim in the old session (and therefore NOT in voiceBaseRef)
+  // are still recognised as echoes if Chrome re-fires them as finals.
+  const lastDisplayedRef = useRef<string>("");
   const menuRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const { toast } = useToast();
@@ -136,7 +141,9 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
   };
 
   // How long after an auto-restart to suppress Chrome's echo of previous speech.
-  const ECHO_WINDOW_MS = 1200;
+  // 2500ms covers the typical lag seen on Android Chrome where previously-interim
+  // words arrive as finals in the new recognition session.
+  const ECHO_WINDOW_MS = 2500;
 
   const startRecognitionInstance = (SpeechRecognition: any) => {
     // ── Session isolation ──────────────────────────────────────────────────
@@ -223,7 +230,9 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
         snapshot.includes(live.toLowerCase());
       const displayLive = liveIsEcho ? "" : live;
 
-      setInput(displayLive ? (base ? base + " " + displayLive : displayLive) : base);
+      const displayValue = displayLive ? (base ? base + " " + displayLive : displayLive) : base;
+      lastDisplayedRef.current = displayValue;
+      setInput(displayValue);
     };
 
     recognition.onerror = (event: any) => {
@@ -249,9 +258,11 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
       processedIndexRef.current = 0;
 
       if (!manualStopRef.current) {
-        // Snapshot base and timestamp for echo suppression in the new session.
+        // Snapshot the FULL displayed text (finals + last interim) so that
+        // words which were only interim when the session ended are also
+        // suppressed if Chrome re-fires them as finals in the new session.
         restartTimeRef.current = Date.now();
-        restartBaseRef.current = voiceBaseRef.current;
+        restartBaseRef.current = lastDisplayedRef.current || voiceBaseRef.current;
         // Always create a fresh instance; calling .start() on an ended instance
         // throws InvalidStateError in Chrome.
         try {
@@ -404,7 +415,8 @@ export function InputBar({ onSend, onUpload, disabled }: InputBarProps) {
       {menuOpen && (
         <div
           ref={menuRef}
-          className="absolute bottom-full left-0 mb-2 glass border border-white/10 rounded-xl shadow-2xl shadow-black/40 z-50 overflow-hidden animate-in slide-in-from-bottom-2 duration-150 min-w-[180px]"
+          className="absolute bottom-full left-0 mb-2 rounded-xl border border-white/10 shadow-2xl shadow-black/80 z-50 overflow-hidden animate-in slide-in-from-bottom-2 duration-150 min-w-[180px]"
+          style={{ background: "#0d0b1e" }}
         >
           {flags.image_upload && (
             <button

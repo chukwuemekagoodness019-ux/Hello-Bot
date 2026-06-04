@@ -286,6 +286,9 @@ export default function ChatPage() {
     try {
       const formData = new FormData();
       formData.append("file", file);
+      if (trimmedInstruction) {
+        formData.append("prompt", trimmedInstruction);
+      }
 
       const res = await fetch(`${BASE}api/upload`, {
         method: "POST",
