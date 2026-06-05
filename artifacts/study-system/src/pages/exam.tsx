@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import {
   ChevronLeft, Clock, Trophy, CheckCircle, XCircle, FileText,
-  MessageSquare, GraduationCap, Lock, Copy, Share2, Link2, Brain,
+  MessageSquare, GraduationCap, Lock, Copy, Share2, Link2, Brain, BarChart2,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -490,6 +490,9 @@ export default function ExamPage() {
       </button>
       <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-primary">
         <FileText className="w-5 h-5" /><span className="text-[10px] font-medium">Exam</span>
+      </button>
+      <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/dashboard", { replace: true })}>
+        <BarChart2 className="w-5 h-5" /><span className="text-[10px] font-medium">Stats</span>
       </button>
     </nav>
   );
@@ -1059,6 +1062,29 @@ export default function ExamPage() {
                 </div>
               </details>
             )}
+
+            {/* Dashboard Bridge Card */}
+            <div
+              className="rounded-2xl border border-indigo-500/20 shadow-lg shadow-indigo-950/30 overflow-hidden"
+              style={{ background: "rgba(15, 12, 30, 0.65)", backdropFilter: "blur(12px)" }}
+            >
+              <div className="p-5 flex flex-col items-center text-center gap-3">
+                <div className="w-10 h-10 rounded-xl bg-indigo-500/10 ring-1 ring-indigo-500/25 flex items-center justify-center">
+                  <BarChart2 className="w-5 h-5 text-indigo-400" />
+                </div>
+                <div>
+                  <p className="text-sm font-semibold text-slate-100 mb-0.5">Track your full academic progress</p>
+                  <p className="text-xs text-slate-400">Your score has been logged. View streaks, weak areas, and active roadmaps on your dashboard.</p>
+                </div>
+                <button
+                  onClick={() => setLocation("/dashboard")}
+                  className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600/80 to-violet-600/80 hover:from-indigo-500/90 hover:to-violet-500/90 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 active:scale-[0.98] ring-1 ring-indigo-500/30"
+                >
+                  <BarChart2 className="w-4 h-4" />
+                  View Academic Dashboard →
+                </button>
+              </div>
+            </div>
 
             <Button className="w-full h-12 text-base" onClick={() => { setState("form"); setQuizResult(null); setActiveQuiz(null); }}>
               Take Another Exam
