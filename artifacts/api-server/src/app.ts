@@ -32,7 +32,44 @@ app.use(
     },
   }),
 );
-app.use(cors({ origin: true, credentials: true }));
+
+// ---------------------------------------------------------------------------
+// CORS — production-safe origin allowlist.
+//
+// Set CORS_ORIGIN to a comma-separated list of allowed origins, e.g.:
+//   CORS_ORIGIN=https://yourdomain.replit.app,https://www.yourdomain.com
+//
+// localhost and 127.0.0.1 on any port are always allowed for local dev.
+// Same-origin requests (no Origin header) are always allowed.
+// ---------------------------------------------------------------------------
+const _configuredOrigins = (process.env.CORS_ORIGIN ?? "")
+  .split(",")
+  .map((s) => s.trim())
+  .filter(Boolean);
+
+app.use(
+  cors({
+    origin: (origin, callback) => {
+      // Same-origin / server-to-server requests have no Origin header
+      if (!origin) {
+        callback(null, true);
+        return;
+      }
+      const isLocalhost =
+        /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
+        /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin);
+      const isAllowed =
+        isLocalhost || _configuredOrigins.includes(origin);
+      if (isAllowed) {
+        callback(null, true);
+      } else {
+        callback(new Error(`CORS: origin '${origin}' is not allowed`));
+      }
+    },
+    credentials: true,
+  }),
+);
+
 app.use(cookieParser());
 app.use(express.json({ limit: "2mb" }));
 app.use(express.urlencoded({ extended: true }));

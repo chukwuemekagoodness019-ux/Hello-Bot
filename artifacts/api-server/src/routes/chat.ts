@@ -59,6 +59,8 @@ router.post("/chat", sessionMiddleware, async (req, res, next) => {
 // Streaming chat — returns Server-Sent Events.
 // Each data event: { text: string }  — accumulate into full message.
 // Final event: [DONE]
+// Comment lines (": heartbeat") are sent every 15 s to prevent reverse-proxy
+// idle-connection timeouts during long AI generation.
 // Error before stream starts: normal HTTP error JSON.
 // BUG-01 FIX: Counter is NOT incremented when all providers fail (STREAM_FALLBACK).
 // ---------------------------------------------------------------------------
@@ -97,6 +99,14 @@ router.post("/chat/stream", sessionMiddleware, async (req, res, next) => {
     res.setHeader("X-Accel-Buffering", "no");
     res.flushHeaders();
 
+    // Keepalive: send SSE comment every 15 s so reverse proxies don't close
+    // idle connections during long AI generation times.
+    const heartbeat = setInterval(() => {
+      if (!res.writableEnded) {
+        res.write(": heartbeat\n\n");
+      }
+    }, 15_000);
+
     let fullReply = "";
 
     try {
@@ -108,6 +118,8 @@ router.post("/chat/stream", sessionMiddleware, async (req, res, next) => {
         fullReply = STREAM_FALLBACK;
         res.write(`data: ${JSON.stringify({ text: STREAM_FALLBACK })}\n\n`);
       }
+    } finally {
+      clearInterval(heartbeat);
     }
 
     if (!fullReply.trim()) {

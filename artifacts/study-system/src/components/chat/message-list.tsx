@@ -75,8 +75,37 @@ function parseRoadmap(content: string): { text: string; milestones: string[] | n
   return { text: stripped, milestones: milestones.length > 0 ? milestones : null };
 }
 
+// djb2-style hash — converts a milestone list into a short stable key.
+function fingerprintMilestones(milestones: string[]): string {
+  const str = milestones.join("|");
+  let h = 0;
+  for (const c of str) h = (Math.imul(31, h) + c.charCodeAt(0)) | 0;
+  return Math.abs(h).toString(36);
+}
+
+interface StoredRoadmap {
+  milestones: string[];
+  checked: number[];
+}
+
 function RoadmapCard({ milestones, onMilestoneTick }: { milestones: string[]; onMilestoneTick?: () => void }) {
-  const [checked, setChecked] = useState<Set<number>>(() => new Set());
+  const lsKey = `roadmap_${fingerprintMilestones(milestones)}`;
+
+  const [checked, setChecked] = useState<Set<number>>(() => {
+    try {
+      const stored = JSON.parse(localStorage.getItem(lsKey) ?? "null") as StoredRoadmap | null;
+      if (stored?.checked) return new Set(stored.checked);
+    } catch {}
+    return new Set<number>();
+  });
+
+  // Persist to localStorage whenever the checked state changes.
+  useEffect(() => {
+    try {
+      const data: StoredRoadmap = { milestones, checked: [...checked] };
+      localStorage.setItem(lsKey, JSON.stringify(data));
+    } catch {}
+  }, [checked, lsKey, milestones]);
 
   const toggle = (i: number) => {
     setChecked((prev) => {

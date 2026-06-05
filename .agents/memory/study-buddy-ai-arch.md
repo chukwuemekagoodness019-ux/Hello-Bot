@@ -23,9 +23,12 @@ buildOpenAIMessages() merges all [FILE_CONTEXT] system messages from the convers
   Then conversationMessages (user/assistant only) follow in order.
 This ensures PDF and image context always reaches the AI at highest priority for ALL follow-up questions.
 
-## Spaced Repetition Notification Hook
-lib/review-schedule.ts: lightweight in-memory scheduler. scheduleReview(userId, subject) called (fire-and-forget synchronous) after both quiz/submit and exam/submit success. Stores 3 entries per completion: 24h, 3-day, 7-day intervals. Capped at 30 entries per user.
-Delivery: checkAndDispatchDueReviews(userId, sendAdminMessage) called as void fire-and-forget at the TOP of GET /api/user/messages handler (before getUserMessages). When entries are due, dispatches via sendAdminMessage with from_admin:"system" — frontend bell icon picks them up automatically. No new routes, no new DB tables, no new UI.
+## Spaced Repetition — Supabase write-through
+lib/review-schedule.ts: in-memory store + Supabase `review_schedules` table.
+- `initReviewSchedules()` called in startup Promise.all — loads future entries from DB into memory.
+- `scheduleReview()` writes to Supabase fire-and-forget, in-memory updated synchronously.
+- `checkAndDispatchDueReviews()` dispatches from in-memory; deletes from Supabase async.
+- Delivery via sendAdminMessage — bell icon picks up automatically. Called void at top of GET /api/user/messages.
 
 ## Auth
 HMAC-SHA256 signed session cookies. SESSION_SECRET env var (defaults to dev string — must be set in Render prod). secure: only in production. sameSite: lax.
@@ -35,18 +38,58 @@ lib/rate-limit.ts — simple in-memory IP bucket.
 - /api/admin/login: 10 req / 15 min / IP
 - /api/auth/login: 20 req / 15 min / IP
 - /api/auth/register: 10 req / 1 hr / IP
-app.set("trust proxy", 1) added to app.ts for Render.com proxy.
+Per-user message/quiz/voice counters are in Supabase `users` table — NOT in-memory.
+app.set("trust proxy", 1) in app.ts for Render.com proxy.
 
-## Persistent Store (Supabase write-through)
-announcements.ts: write-through cache. initAnnouncements() loads from `app_announcements` table at startup.
-flags.ts: same write-through pattern. initFlags() loads from `feature_flags` table. isFlagEnabled() stays synchronous.
-user-messages.ts: fully async. Reads/writes go to `admin_messages` table with in-memory Map fallback.
-exam-store.ts (quizStore): NOW Supabase write-through. setExam(), updateSubmittedUsers(), deleteQuiz() for writes; initExamStore() at startup. revokeExam() delegates to deleteQuiz().
-exam-limits.ts (NEW lib): canCreateExam() + initExamLimits() with Supabase write-through on period `exam_limits` table (PRIMARY KEY user_id,period). Quiz.ts now imports from this lib — no longer has inline examLimits Map.
+## CORS — production-safe allowlist
+Set `CORS_ORIGIN=https://yourapp.replit.app` (comma-separated) in deployment secrets.
+localhost + 127.0.0.1 always allowed. Same-origin (no Origin header) always allowed.
+
+## SSE heartbeat
+`POST /api/chat/stream` sends `: heartbeat\n\n` (SSE comment) every 15 s via setInterval to prevent reverse-proxy idle timeouts.
+
+## Payment screenshots → Supabase Storage
+- Upload to `payment-screenshots` bucket (create as PUBLIC in Supabase dashboard first).
+- `screenshot_data` column stores either a public Storage URL (new) or legacy base64 (old).
+- Admin `/admin/payments/:id/screenshot` route: if `screenshotData.startsWith("https://")` → HTTP 302 redirect; else → serve base64 buffer.
+- Fallback: if Storage upload fails, base64 stored so payment is never blocked.
+- Server env vars renamed: PAYMENT_ACCOUNT_NAME, PAYMENT_ACCOUNT_NUMBER, PAYMENT_PROVIDER (NOT VITE_ prefixed).
+
+## Chat history → Supabase
+- `user_conversations` table (migration 002).
+- Frontend debounces sync 2 s after any conversation change → PUT /api/conversations.
+- FILE_CONTEXT system messages (PDFs) stripped before sync — too large for JSONB.
+- On mount: if localStorage empty, fetches GET /api/conversations and hydrates state.
+- Routes: `routes/conversations.ts` — GET/PUT /api/conversations.
+
+## Dashboard page (`/dashboard`)
+- Route added to App.tsx and bottom nav of chat page (BarChart2 icon, "Stats" label).
+- Fetches GET /api/dashboard: streak + weaknesses (avg<70% last 30d) + recentAttempts.
+- Backend: `routes/dashboard.ts` + `lib/db-dashboard.ts` (queries quiz_attempts table).
+- "Remediate" button navigates to `/?ep=encodeURIComponent(prompt)` (same URL param as exam handoff).
+- Active roadmaps read from localStorage keys `roadmap_<fingerprint>`.
+
+## Exam → Chat handoff (URL param)
+- Changed from sessionStorage to URL param: `setLocation("/?ep=encodeURIComponent(prompt)")`.
+- Chat reads `window.location.search` URLSearchParams `ep` in useState initializer; cleans URL with `history.replaceState` in useEffect.
+- **Why:** sessionStorage fails when opened in a new tab. URL param survives any navigation pattern.
+
+## Roadmap localStorage persistence
+- `RoadmapCard` in `message-list.tsx` saves `{ milestones, checked[] }` to `roadmap_<fingerprint>`.
+- Fingerprint: djb2-style hash of `milestones.join("|")`.
+- Loaded on mount — checked state survives page reloads.
+- Dashboard reads all `roadmap_*` keys to show active (incomplete) roadmaps.
+
+## Persistent Stores (Supabase write-through)
+announcements.ts, flags.ts, rejection-reasons.ts, error-log.ts, exam-store.ts, exam-limits.ts, review-schedule.ts, db-conversations.ts — all Supabase write-through with in-memory Map fallback.
 admin tokens (admin.ts): intentionally in-memory (security — 4h TTL).
-rejection-reasons.ts: Supabase write-through on `payment_rejection_reasons` table.
-error-log.ts: Supabase write-through on `ai_error_log` table.
-SQL migrations: 001 = initial persistent store; 002 = rejection_reasons + ai_error_log; 003 = active_exams + exam_limits. All run once in Supabase SQL editor. Server falls back to in-memory gracefully if tables absent.
+
+## SQL Migrations
+- 001 = initial persistent store tables
+- 002 = rejection_reasons + ai_error_log + review_schedules + user_conversations
+  (run `migrations/002_persistence_upgrade.sql` in Supabase SQL editor)
+- 003 = active_exams + exam_limits
+All fallback to in-memory if tables absent.
 
 ## Quiz/Exam Generation
 generateQuiz() max_tokens MUST be 8192 (not 4096) — 50 questions with options/answers/explanations easily exceeds 4096 tokens and truncates JSON.

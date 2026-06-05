@@ -466,8 +466,8 @@ export default function ExamPage() {
       .map((r) => extractConcept(r.prompt))
       .join(", ");
     const prompt = `I just finished an exam simulation on "${activeQuiz.subject}" and struggled with: ${topics}. Please provide a targeted breakdown of these specific topics.`;
-    sessionStorage.setItem("examWeakSpotsPrompt", prompt);
-    setLocation("/");
+    // Use URL param instead of sessionStorage so the prompt survives new-tab navigation.
+    setLocation(`/?ep=${encodeURIComponent(prompt)}`);
   };
 
   const getTimerColor = () =>

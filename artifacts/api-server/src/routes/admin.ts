@@ -94,6 +94,12 @@ router.get("/admin/payments/:id/screenshot", async (req, res, next) => {
       res.status(404).json({ error: "No screenshot found", code: "NOT_FOUND" });
       return;
     }
+    // New: screenshotData is a Supabase Storage public URL — redirect to it.
+    if (payment.screenshotData.startsWith("https://")) {
+      res.redirect(302, payment.screenshotData);
+      return;
+    }
+    // Legacy: screenshotData is a base64-encoded image — serve the buffer.
     const name = payment.screenshotName ?? "";
     const mimeType = /\.(png)$/i.test(name) ? "image/png" : /\.(webp)$/i.test(name) ? "image/webp" : "image/jpeg";
     const buffer = Buffer.from(payment.screenshotData, "base64");

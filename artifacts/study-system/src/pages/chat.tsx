@@ -8,7 +8,7 @@ import { PwaInstallButton } from "@/components/pwa-install-button";
 import { PwaInstallBanner } from "@/components/pwa-install-banner";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
 import { useIsOffline } from "@/components/offline-banner";
-import { Menu, Flame, Plus, GraduationCap, FileText, MessageSquare, Bell, X } from "lucide-react";
+import { Menu, Flame, Plus, GraduationCap, FileText, MessageSquare, Bell, X, BarChart2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import { useChatHistory } from "@/hooks/use-chat-history";
@@ -81,13 +81,29 @@ export default function ChatPage() {
   // Rolling summarization: don't run two summarisations at once.
   const summaryInProgressRef = useRef(false);
 
-  // Exam coaching handoff: read once on mount if user navigated here from exam results
+  // Exam coaching handoff: read the ?ep= URL param once on mount then clean it.
+  // Using a URL param instead of sessionStorage lets the handoff survive opening
+  // in a new tab and avoids shared-state race conditions.
   const [pendingExamPrompt] = useState<string | null>(() => {
-    const p = sessionStorage.getItem("examWeakSpotsPrompt");
-    if (p) sessionStorage.removeItem("examWeakSpotsPrompt");
-    return p || null;
+    try {
+      const params = new URLSearchParams(window.location.search);
+      const ep = params.get("ep");
+      return ep ? decodeURIComponent(ep) : null;
+    } catch {
+      return null;
+    }
   });
   const pendingFiredRef = useRef(false);
+
+  // Clean the ?ep= param from the URL bar after reading it.
+  useEffect(() => {
+    if (!pendingExamPrompt) return;
+    try {
+      const url = new URL(window.location.href);
+      url.searchParams.delete("ep");
+      window.history.replaceState({}, "", url.toString());
+    } catch {}
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Last studied subject from exam localStorage history — used by welcome state
   const [lastStudied] = useState<{ subject: string; date: string } | null>(() => {
@@ -659,6 +675,13 @@ export default function ChatPage() {
         >
           <FileText className="w-5 h-5" />
           <span className="text-[10px] font-medium">Exam</span>
+        </button>
+        <button
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors"
+          onClick={() => setLocation("/dashboard")}
+        >
+          <BarChart2 className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Stats</span>
         </button>
       </nav>
 

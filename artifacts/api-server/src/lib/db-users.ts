@@ -29,6 +29,7 @@ export interface Payment {
   plan: string;
   transactionId: string;
   screenshotName: string | null;
+  /** Either a Supabase Storage public URL (new) or a base64-encoded string (legacy). */
   screenshotData: string | null;
   status: string;
   createdAt: Date;
@@ -207,6 +208,7 @@ export async function insertPayment(values: {
   plan: string;
   transactionId: string;
   screenshotName: string | null;
+  /** Public Supabase Storage URL (preferred) or base64 string (legacy fallback). */
   screenshotData: string | null;
   status: string;
 }): Promise<Payment> {

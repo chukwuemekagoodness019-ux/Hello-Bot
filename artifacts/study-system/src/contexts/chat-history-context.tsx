@@ -1,6 +1,8 @@
 import { createContext, useContext, useState, useCallback, useEffect, useRef } from "react";
 import type { ReactNode } from "react";
 
+const BASE = import.meta.env.BASE_URL as string;
+
 export interface ChatMessage {
   role: "user" | "assistant" | "system";
   content: string;
@@ -142,6 +144,7 @@ export function ChatHistoryProvider({ children }: { children: ReactNode }) {
   const [conversations, setConversations] = useState<Conversation[]>(loadConversations);
   const [currentId, setCurrentIdState] = useState<string | null>(null);
   const currentIdRef = useRef<string | null>(null);
+  const syncTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     currentIdRef.current = currentId;
@@ -152,6 +155,7 @@ export function ChatHistoryProvider({ children }: { children: ReactNode }) {
     setCurrentIdState(id);
   }, []);
 
+  // ── localStorage persistence ─────────────────────────────────────────────
   useEffect(() => {
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(conversations));
@@ -170,6 +174,46 @@ export function ChatHistoryProvider({ children }: { children: ReactNode }) {
     }, 60 * 60 * 1000); // check every hour
     return () => clearInterval(interval);
   }, []);
+
+  // ── Server sync (debounced, 2 s after last change) ───────────────────────
+  // FILE_CONTEXT system messages are stripped before upload — they can be
+  // several MB (full PDF text) and are not useful across devices.
+  useEffect(() => {
+    if (conversations.length === 0) return;
+    if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    syncTimerRef.current = setTimeout(() => {
+      const payload = conversations.slice(0, 50).map((c) => ({
+        id: c.id,
+        title: c.title,
+        updatedAt: c.updatedAt,
+        messages: c.messages
+          .filter((m) => !(m.role === "system" && m.content.startsWith("[FILE_CONTEXT")))
+          .slice(0, 200),
+      }));
+      fetch(`${BASE}api/conversations`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({ conversations: payload }),
+      }).catch(() => {});
+    }, 2000);
+    return () => {
+      if (syncTimerRef.current) clearTimeout(syncTimerRef.current);
+    };
+  }, [conversations]);
+
+  // ── On mount: pull from server if localStorage is empty ──────────────────
+  useEffect(() => {
+    if (conversations.length > 0) return;
+    fetch(`${BASE}api/conversations`, { credentials: "include" })
+      .then((r) => (r.ok ? (r.json() as Promise<{ conversations: Conversation[] }>) : null))
+      .then((data) => {
+        if (data?.conversations?.length) {
+          setConversations(data.conversations);
+        }
+      })
+      .catch(() => {});
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
   const currentConversation = conversations.find((c) => c.id === currentId);
 
@@ -222,14 +266,14 @@ export function ChatHistoryProvider({ children }: { children: ReactNode }) {
     );
   }, []);
 
-  // -------------------------------------------------------------------------
+  // ─────────────────────────────────────────────────────────────────────────
   // Rolling summarization — replaces older chat messages with a compact
   // [CONVERSATION_SUMMARY] system message while preserving:
   //   1. All [FILE_CONTEXT...] system messages (uploaded PDFs / images)
   //   2. The last `keepRecent` user/assistant messages verbatim
   // Uses setConversations(prev => ...) so it always sees the latest state
   // even when called from an async context after a stream finishes.
-  // -------------------------------------------------------------------------
+  // ─────────────────────────────────────────────────────────────────────────
   const compressConversation = useCallback(
     (convId: string, summary: string, keepRecent: number) => {
       if (!summary) return;

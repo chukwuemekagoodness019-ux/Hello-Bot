@@ -9,6 +9,8 @@ import paymentRouter from "./payment";
 import adminRouter from "./admin";
 import controlRouter from "./control";
 import userMessagesRouter from "./user-messages";
+import conversationsRouter from "./conversations";
+import dashboardRouter from "./dashboard";
 
 const router: IRouter = Router();
 
@@ -22,5 +24,7 @@ router.use(paymentRouter);
 router.use(adminRouter);
 router.use(controlRouter);
 router.use(userMessagesRouter);
+router.use(conversationsRouter);
+router.use(dashboardRouter);
 
 export default router;
