@@ -1,4 +1,4 @@
-import { useState, useRef, useCallback } from "react";
+import { useState, useRef, useCallback, useEffect } from "react";
 import { useGetMe } from "@workspace/api-client-react";
 import { InputBar } from "@/components/chat/input-bar";
 import { MessageList } from "@/components/chat/message-list";
@@ -17,6 +17,47 @@ import { usePaymentModal } from "@/hooks/use-payment-modal";
 import { useUserMessages } from "@/hooks/use-user-messages";
 
 const BASE = import.meta.env.BASE_URL as string;
+
+// -------------------------------------------------------------------------
+// "Ask My Notes" — detects retrospective note queries and pulls archived
+// PDF contexts from all localStorage conversations into the AI request.
+// -------------------------------------------------------------------------
+const NOTES_QUERY_REGEX =
+  /\b(my notes?|my document|my upload(?:ed)?|my pdf|what did.*(?:note|document|pdf)|from my|based on my|according to my|ask my notes?|in my notes?|from the (?:pdf|document)|my (?:bio|physics|chem|math|english|history|economics|geography)\w*\s+notes?)\b/i;
+
+function getArchivedNoteContexts(currentMessages: ChatMessage[]): ChatMessage[] {
+  try {
+    const stored = localStorage.getItem("ai_study_conversations");
+    if (!stored) return [];
+    const all = JSON.parse(stored) as Array<{
+      messages?: Array<{ role: string; content: string }>;
+    }>;
+    const currentKeys = new Set(
+      currentMessages
+        .filter((m) => m.role === "system" && m.content.includes("[FILE_CONTEXT:pdf"))
+        .map((m) => m.content.slice(0, 200)),
+    );
+    const seen = new Set<string>();
+    const contexts: ChatMessage[] = [];
+    for (const conv of all) {
+      for (const msg of conv.messages ?? []) {
+        if (msg.role === "system" && msg.content.includes("[FILE_CONTEXT:pdf")) {
+          const key = msg.content.slice(0, 200);
+          if (!seen.has(key) && !currentKeys.has(key)) {
+            seen.add(key);
+            contexts.push({
+              role: "system",
+              content: msg.content.replace("[FILE_CONTEXT:pdf", "[ARCHIVED_NOTES:pdf"),
+            });
+          }
+        }
+      }
+    }
+    return contexts;
+  } catch {
+    return [];
+  }
+}
 
 export default function ChatPage() {
   const { data: user, refetch: refetchUser } = useGetMe();
@@ -268,7 +309,20 @@ export default function ChatPage() {
     const preMessages = currentConversation?.messages ?? [];
     const convId = addMessage(userMsg);
     setLocalError(null);
-    await streamChat(buildHistory(preMessages, userMsg), convId, usedVoice);
+
+    // "Ask My Notes" — inject archived PDF contexts from past conversations
+    // when the user asks a retrospective question about their documents.
+    let history = buildHistory(preMessages, userMsg);
+    if (NOTES_QUERY_REGEX.test(content)) {
+      const archived = getArchivedNoteContexts(preMessages);
+      if (archived.length > 0) {
+        const sysMsgs = history.filter((m) => m.role === "system");
+        const otherMsgs = history.filter((m) => m.role !== "system");
+        history = [...sysMsgs, ...archived, ...otherMsgs];
+      }
+    }
+
+    await streamChat(history, convId, usedVoice);
     void triggerSummarize(convId, preMessages);
   };
 

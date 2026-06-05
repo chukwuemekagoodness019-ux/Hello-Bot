@@ -86,7 +86,7 @@ export default function QuizPage() {
         },
       },
       {
-        onSuccess: (quiz) => {
+        onSuccess: (quiz: Quiz) => {
           setActiveQuiz(quiz);
           setAnswers({});
           answersRef.current = {};
@@ -133,7 +133,7 @@ export default function QuizPage() {
         },
       },
       {
-        onSuccess: (res) => {
+        onSuccess: (res: QuizResult) => {
           setQuizResult(res);
           setState("results");
           refetchMe();

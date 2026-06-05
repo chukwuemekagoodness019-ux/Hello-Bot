@@ -2,6 +2,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { usePaymentModal } from "@/hooks/use-payment-modal";
 import { Button } from "@/components/ui/button";
 import { useGetPaymentInfo } from "@workspace/api-client-react";
+import type { PaymentInfoPlansItem } from "@workspace/api-client-react";
 import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -104,7 +105,7 @@ export function PaymentModal() {
             <div className="space-y-3">
               <Label>1. Select a Plan</Label>
               <div className="grid grid-cols-2 gap-3">
-                {paymentInfo.plans.map((plan) => (
+                {paymentInfo.plans.map((plan: PaymentInfoPlansItem) => (
                   <button
                     key={plan.id}
                     type="button"
