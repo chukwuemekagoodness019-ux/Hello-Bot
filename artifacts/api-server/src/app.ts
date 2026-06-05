@@ -59,7 +59,10 @@ app.use(
         /^https?:\/\/localhost(:\d+)?$/.test(origin) ||
         /^https?:\/\/127\.0\.0\.1(:\d+)?$/.test(origin);
       const isAllowed =
-        isLocalhost || _configuredOrigins.includes(origin);
+  isLocalhost ||
+  (origin ? _configuredOrigins.includes(origin) : false) ||
+  (origin ? origin.endsWith(".replit.dev") : false) ||
+  (origin ? origin.endsWith(".onrender.com") : false);
       if (isAllowed) {
         callback(null, true);
       } else {
