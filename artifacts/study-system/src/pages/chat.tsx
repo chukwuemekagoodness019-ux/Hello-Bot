@@ -398,6 +398,9 @@ export default function ChatPage() {
   const pwaInstall = usePwaInstall();
   const isOffline = useIsOffline();
   const isBusy = isPending || isStreaming || isUploading;
+  const hasDocContext = (currentConversation?.messages ?? []).some(
+    (m) => m.role === "system" && m.content.includes("[FILE_CONTEXT:pdf"),
+  );
   const visibleMessages = (currentConversation?.messages ?? []).filter(
     (m) => m.role !== "system",
   );
@@ -545,6 +548,7 @@ export default function ChatPage() {
             onRetry={handleRetry}
             streak={user?.streak?.currentStreak}
             lastStudied={lastStudied}
+            onMilestoneTick={refetchUser}
           />
         </div>
 
@@ -552,6 +556,20 @@ export default function ChatPage() {
             bg-background (solid) is intentional: prevents message text from
             bleeding through the bar as users scroll. Do NOT use glass/transparent. */}
         <div className="fixed left-0 right-0 input-bar-bottom md:static md:bottom-auto p-3 bg-background border-t border-white/8 z-40 shrink-0">
+          {hasDocContext && (
+            <div className="flex justify-end mb-2 px-1">
+              <div
+                className="flex items-center gap-1.5 rounded-full px-2.5 py-1 text-[11px] font-medium border select-none"
+                style={{
+                  background: "rgba(15, 12, 30, 0.7)",
+                  borderColor: "rgba(56, 189, 248, 0.2)",
+                  color: "#38bdf8",
+                }}
+              >
+                🎓 Lecturer Style Active
+              </div>
+            </div>
+          )}
           <InputBar onSend={handleSend} onUpload={handleUpload} disabled={isBusy || isOffline} />
         </div>
       </div>

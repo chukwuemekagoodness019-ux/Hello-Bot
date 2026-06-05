@@ -16,6 +16,7 @@ interface MessageListProps {
   onRetry?: () => void;
   streak?: number;
   lastStudied?: { subject: string; date: string } | null;
+  onMilestoneTick?: () => void;
 }
 
 type VoiceGender = "default" | "female" | "male";
@@ -57,6 +58,108 @@ function parseQuizBridge(content: string): { text: string; topic: string | null 
     text: content.slice(0, match.index).trimEnd(),
     topic: match[1].trim(),
   };
+}
+
+const ROADMAP_REGEX = /\[START_ROADMAP\]([\s\S]*?)\[END_ROADMAP\]/i;
+
+function parseRoadmap(content: string): { text: string; milestones: string[] | null } {
+  const match = ROADMAP_REGEX.exec(content);
+  if (!match) return { text: content, milestones: null };
+  const milestones = match[1]
+    .split("\n")
+    .map((l) => l.trim())
+    .filter(Boolean);
+  const stripped = (
+    content.slice(0, match.index) + content.slice(match.index + match[0].length)
+  ).trim();
+  return { text: stripped, milestones: milestones.length > 0 ? milestones : null };
+}
+
+function RoadmapCard({ milestones, onMilestoneTick }: { milestones: string[]; onMilestoneTick?: () => void }) {
+  const [checked, setChecked] = useState<Set<number>>(() => new Set());
+
+  const toggle = (i: number) => {
+    setChecked((prev) => {
+      const next = new Set(prev);
+      if (next.has(i)) {
+        next.delete(i);
+      } else {
+        next.add(i);
+        onMilestoneTick?.();
+      }
+      return next;
+    });
+  };
+
+  const done = checked.size;
+  const total = milestones.length;
+
+  return (
+    <div
+      className="mt-3 w-full max-w-[88%] rounded-2xl overflow-hidden animate-in fade-in slide-in-from-bottom-2 duration-400 shadow-xl shadow-black/40"
+      style={{
+        background: "rgba(15, 12, 30, 0.65)",
+        backdropFilter: "blur(12px)",
+        border: "1px solid rgba(56, 189, 248, 0.18)",
+      }}
+    >
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/8">
+        <span className="text-[10px] font-semibold uppercase tracking-widest text-cyan-400">
+          📋 Study Roadmap
+        </span>
+        <span className="text-[10px] text-slate-500 tabular-nums font-medium">
+          {done}/{total} completed
+        </span>
+      </div>
+      {total > 0 && (
+        <div className="h-0.5 bg-white/5">
+          <div
+            className="h-full bg-gradient-to-r from-cyan-500 to-indigo-500 transition-all duration-500"
+            style={{ width: `${(done / total) * 100}%` }}
+          />
+        </div>
+      )}
+      <div className="p-3 space-y-1.5">
+        {milestones.map((milestone, i) => (
+          <button
+            key={i}
+            onClick={() => toggle(i)}
+            className={`w-full flex items-start gap-3 px-3 py-2.5 rounded-xl text-left text-sm transition-all duration-150 ${
+              checked.has(i)
+                ? "bg-cyan-500/8 border border-cyan-500/20"
+                : "bg-white/[0.03] border border-white/8 hover:border-cyan-500/25 hover:bg-white/5"
+            }`}
+          >
+            <div
+              className={`mt-0.5 shrink-0 w-4 h-4 rounded-full border-2 flex items-center justify-center transition-all duration-150 ${
+                checked.has(i) ? "bg-cyan-500 border-cyan-500" : "border-white/30"
+              }`}
+            >
+              {checked.has(i) && (
+                <svg width="8" height="6" viewBox="0 0 10 8" fill="none">
+                  <path d="M1 4L3.5 6.5L9 1" stroke="white" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              )}
+            </div>
+            <span
+              className={`leading-relaxed break-words [overflow-wrap:anywhere] ${
+                checked.has(i) ? "line-through text-slate-500" : "text-slate-300"
+              }`}
+            >
+              {milestone}
+            </span>
+          </button>
+        ))}
+      </div>
+      {done === total && total > 0 && (
+        <div className="px-4 py-3 border-t border-white/8 text-center">
+          <p className="text-xs font-medium" style={{ color: "#34d399" }}>
+            🎉 Roadmap complete — you&apos;re exam ready!
+          </p>
+        </div>
+      )}
+    </div>
+  );
 }
 
 function QuizBridgeCard({ topic }: { topic: string }) {
@@ -157,6 +260,7 @@ export function MessageList({
   onRetry,
   streak,
   lastStudied,
+  onMilestoneTick,
 }: MessageListProps) {
   const bottomRef = useRef<HTMLDivElement>(null);
   const [speakingIdx, setSpeakingIdx] = useState<number | null>(null);
@@ -356,8 +460,14 @@ export function MessageList({
       )}
 
       {messages.map((msg, idx) => {
+        const { text: afterRoadmap, milestones } =
+          msg.role === "assistant"
+            ? parseRoadmap(msg.content)
+            : { text: msg.content, milestones: null };
         const { text: displayContent, topic: bridgeTopic } =
-          msg.role === "assistant" ? parseQuizBridge(msg.content) : { text: msg.content, topic: null };
+          msg.role === "assistant"
+            ? parseQuizBridge(afterRoadmap)
+            : { text: afterRoadmap, topic: null };
         return (
           <div
             key={idx}
@@ -405,6 +515,9 @@ export function MessageList({
               </button>
             )}
 
+            {milestones && milestones.length > 0 && (
+              <RoadmapCard milestones={milestones} onMilestoneTick={onMilestoneTick} />
+            )}
             {bridgeTopic && <QuizBridgeCard topic={bridgeTopic} />}
           </div>
         );
@@ -414,7 +527,7 @@ export function MessageList({
       {streamingMessage !== undefined && streamingMessage.length > 0 && (
         <div className="flex flex-col items-start animate-in fade-in duration-200 min-w-0">
           <div className="max-w-[88%] min-w-0 overflow-hidden px-4 py-3 rounded-2xl bubble-ai rounded-bl-sm shadow-xl shadow-black/40">
-            <MarkdownContent content={parseQuizBridge(streamingMessage).text} />
+            <MarkdownContent content={parseQuizBridge(parseRoadmap(streamingMessage).text).text} />
             <span className="inline-block w-0.5 h-4 bg-primary/70 ml-0.5 animate-pulse align-text-bottom" />
           </div>
         </div>
