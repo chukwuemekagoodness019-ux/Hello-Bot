@@ -1,9 +1,46 @@
 import { Router, type IRouter } from "express";
 import { sessionMiddleware, isPremiumActive, LIMITS } from "../lib/session";
 import { updateUser } from "../lib/db-users";
+import type { User } from "../lib/db-users";
+import { getWeaknesses } from "../lib/db-dashboard";
 import { SendChatBody } from "@workspace/api-zod";
 import { chatComplete, chatCompleteStream, summarizeConversation, STREAM_FALLBACK, FALLBACK_MESSAGE } from "../lib/ai";
-import type { ChatMessage } from "../lib/ai";
+import type { ChatMessage, UserProfile } from "../lib/ai";
+
+// ---------------------------------------------------------------------------
+// Per-user weakness cache — 5-minute TTL so we don't hit the DB on every
+// single chat message, but weaknesses stay reasonably fresh.
+// ---------------------------------------------------------------------------
+interface WeaknessCache {
+  at: number;
+  subjects: Array<{ subject: string; avgPercent: number }>;
+}
+const weaknessCache = new Map<number, WeaknessCache>();
+const WEAKNESS_TTL_MS = 5 * 60 * 1000;
+
+async function getCachedWeaknesses(userId: number): Promise<Array<{ subject: string; avgPercent: number }>> {
+  const cached = weaknessCache.get(userId);
+  if (cached && Date.now() - cached.at < WEAKNESS_TTL_MS) return cached.subjects;
+  try {
+    const entries = await getWeaknesses(userId);
+    const subjects = entries.map((e) => ({ subject: e.subject, avgPercent: e.avgPercent }));
+    weaknessCache.set(userId, { at: Date.now(), subjects });
+    return subjects;
+  } catch {
+    return cached?.subjects ?? [];
+  }
+}
+
+function buildProfile(u: User, weakSubjects: Array<{ subject: string; avgPercent: number }>): UserProfile {
+  return {
+    displayName: u.displayName ?? null,
+    currentStreak: u.currentStreak,
+    bestStreak: u.bestStreak,
+    bestScore: u.bestScore,
+    lastActiveDate: u.lastActiveDate ?? null,
+    weakSubjects,
+  };
+}
 
 const router: IRouter = Router();
 
@@ -40,7 +77,9 @@ router.post("/chat", sessionMiddleware, async (req, res, next) => {
       return;
     }
 
-    const reply = await chatComplete(messages);
+    const weakSubjects = await getCachedWeaknesses(Number(u.id));
+    const profile = buildProfile(u, weakSubjects);
+    const reply = await chatComplete(messages, profile);
 
     if (reply !== FALLBACK_MESSAGE) {
       await updateUser(u.id, {
@@ -107,12 +146,15 @@ router.post("/chat/stream", sessionMiddleware, async (req, res, next) => {
       }
     }, 15_000);
 
+    const weakSubjects = await getCachedWeaknesses(Number(u.id));
+    const profile = buildProfile(u, weakSubjects);
+
     let fullReply = "";
 
     try {
       fullReply = await chatCompleteStream(messages, (chunk) => {
         res.write(`data: ${JSON.stringify({ text: chunk })}\n\n`);
-      });
+      }, profile);
     } catch {
       if (!fullReply.trim()) {
         fullReply = STREAM_FALLBACK;

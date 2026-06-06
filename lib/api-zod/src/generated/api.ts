@@ -19,6 +19,8 @@ export const HealthCheckResponse = zod.object({
  */
 export const GetMeResponse = zod.object({
   id: zod.number(),
+  email: zod.string().nullable().optional(),
+  displayName: zod.string().nullable().optional(),
   isPremium: zod.boolean(),
   premiumUntil: zod.string().nullable(),
   limits: zod.object({

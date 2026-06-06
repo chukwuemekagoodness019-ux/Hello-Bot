@@ -10,6 +10,8 @@ import type { UserStateStreak } from "./userStateStreak";
 
 export interface UserState {
   id: number;
+  email?: string | null;
+  displayName?: string | null;
   isPremium: boolean;
   premiumUntil: string | null;
   limits: UserStateLimits;

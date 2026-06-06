@@ -15,6 +15,7 @@ interface MessageListProps {
   error?: string | null;
   onRetry?: () => void;
   streak?: number;
+  displayName?: string | null;
   lastStudied?: { subject: string; date: string } | null;
   onMilestoneTick?: () => void;
 }
@@ -288,6 +289,7 @@ export function MessageList({
   error,
   onRetry,
   streak,
+  displayName,
   lastStudied,
   onMilestoneTick,
 }: MessageListProps) {
@@ -440,8 +442,17 @@ export function MessageList({
 
         <div className="space-y-2">
           <p className="text-2xl font-bold tracking-tight">
-            <span className="text-neon-cyan">Hello!</span>{" "}
-            <span className="text-slate-100">I'm your AI Study Buddy.</span>
+            {displayName ? (
+              <>
+                <span className="text-neon-cyan">Hey, {displayName}!</span>{" "}
+                <span className="text-slate-100">Ready to study?</span>
+              </>
+            ) : (
+              <>
+                <span className="text-neon-cyan">Hello!</span>{" "}
+                <span className="text-slate-100">I'm your AI Study Buddy.</span>
+              </>
+            )}
           </p>
           {lastStudied && (() => {
             const line = buildMemoryLine(lastStudied.subject, lastStudied.date);

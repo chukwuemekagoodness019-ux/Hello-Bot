@@ -617,6 +617,7 @@ export default function ChatPage() {
             error={localError}
             onRetry={handleRetry}
             streak={user?.streak?.currentStreak}
+            displayName={user?.displayName ?? null}
             lastStudied={lastStudied}
             onMilestoneTick={refetchUser}
           />

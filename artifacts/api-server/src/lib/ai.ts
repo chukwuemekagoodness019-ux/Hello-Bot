@@ -201,14 +201,63 @@ When a [FILE_CONTEXT:pdf] message is present in this conversation:
 - Without an uploaded document, apply the standard Socratic coaching persona without modification.`;
 
 
-function buildSystemPrompt(): string {
+export interface UserProfile {
+  displayName?: string | null;
+  currentStreak?: number;
+  bestStreak?: number;
+  bestScore?: number;
+  lastActiveDate?: string | null;
+  weakSubjects?: Array<{ subject: string; avgPercent: number }>;
+}
+
+function buildSystemPrompt(profile?: UserProfile): string {
   const today = new Date().toLocaleDateString("en-NG", {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
-  return `**Current Date:** Today is ${today}. Use this for any question about dates, current events, or "what day is it." Your training has a knowledge cutoff — for very recent events always say "I may not have the latest information on this — please verify from a current source."\n\n${SYSTEM_PROMPT_BASE}`;
+
+  let profileBlock = "";
+  if (profile) {
+    const lines: string[] = [];
+    if (profile.displayName) lines.push(`Student Name: ${profile.displayName}`);
+    if ((profile.currentStreak ?? 0) > 0)
+      lines.push(`Active Study Streak: ${profile.currentStreak} day${profile.currentStreak !== 1 ? "s" : ""} — student is on a roll`);
+    if ((profile.bestStreak ?? 0) > 0)
+      lines.push(`Personal Best Streak: ${profile.bestStreak} days`);
+    if ((profile.bestScore ?? 0) > 0)
+      lines.push(`Personal Best Quiz Score: ${profile.bestScore}%`);
+    if (profile.lastActiveDate)
+      lines.push(`Last Study Session: ${profile.lastActiveDate}`);
+    if (profile.weakSubjects?.length) {
+      const list = profile.weakSubjects
+        .map((w) => `${w.subject} (avg ${w.avgPercent}%)`)
+        .join(", ");
+      lines.push(`Identified Weak Areas (below 70% average): ${list}`);
+    }
+
+    if (lines.length > 0) {
+      profileBlock =
+        `\n\n---\n**STUDENT PROFILE (INTERNAL — use to personalize coaching; never expose raw data verbatim):**\n` +
+        lines.join("\n") +
+        `\n\nCoaching directives derived from this profile:\n` +
+        (profile.displayName ? `- Address the student as "${profile.displayName}" occasionally (not every message)\n` : "") +
+        ((profile.currentStreak ?? 0) > 0
+          ? `- Acknowledge the streak naturally when motivation is warranted\n`
+          : "") +
+        (profile.weakSubjects?.length
+          ? `- When a weak area topic comes up, invest extra depth and apply Socratic probing\n`
+          : "") +
+        `- Calibrate difficulty expectations to the student's known performance level`;
+    }
+  }
+
+  return (
+    `**Current Date:** Today is ${today}. Use this for any question about dates, current events, or "what day is it." Your training has a knowledge cutoff — for very recent events always say "I may not have the latest information on this — please verify from a current source."\n\n` +
+    SYSTEM_PROMPT_BASE +
+    profileBlock
+  );
 }
 
 export interface ChatMessage {
@@ -402,7 +451,7 @@ export async function getAiStatus(force = false): Promise<AiStatusResult> {
   return data;
 }
 
-function buildOpenAIMessages(messages: ChatMessage[]) {
+function buildOpenAIMessages(messages: ChatMessage[], profile?: UserProfile) {
   // Merge [FILE_CONTEXT] system messages into the main system prompt so the AI
   // receives file content in the highest-priority position and follow-up questions
   // are always answered using that context. Keeping them as separate user turns
@@ -410,7 +459,7 @@ function buildOpenAIMessages(messages: ChatMessage[]) {
   const contextMessages = messages.filter((m) => m.role === "system");
   const conversationMessages = messages.filter((m) => m.role !== "system");
 
-  let systemContent = buildSystemPrompt();
+  let systemContent = buildSystemPrompt(profile);
   if (contextMessages.length > 0) {
     systemContent +=
       "\n\n---\n**Uploaded File Context (use this for ALL follow-up questions):**\n\n" +
@@ -426,7 +475,7 @@ function buildOpenAIMessages(messages: ChatMessage[]) {
   return result;
 }
 
-export async function chatComplete(messages: ChatMessage[]): Promise<string> {
+export async function chatComplete(messages: ChatMessage[], profile?: UserProfile): Promise<string> {
   const cached = getCachedResponse(messages);
   if (cached) {
     logCacheHit("chat");
@@ -442,7 +491,7 @@ export async function chatComplete(messages: ChatMessage[]): Promise<string> {
           model: OPENROUTER_CHAT_MODEL,
           max_tokens: 4096,
           temperature: 0.7,
-          messages: buildOpenAIMessages(messages),
+          messages: buildOpenAIMessages(messages, profile),
         });
         return r.choices[0]?.message?.content ?? "";
       },
@@ -455,7 +504,7 @@ export async function chatComplete(messages: ChatMessage[]): Promise<string> {
           model: OPENAI_CHAT_MODEL,
           max_tokens: 4096,
           temperature: 0.7,
-          messages: buildOpenAIMessages(messages),
+          messages: buildOpenAIMessages(messages, profile),
         });
         return r.choices[0]?.message?.content ?? "";
       },
@@ -468,7 +517,7 @@ export async function chatComplete(messages: ChatMessage[]): Promise<string> {
           model: DEEPSEEK_CHAT_MODEL,
           max_tokens: 4096,
           temperature: 0.7,
-          messages: buildOpenAIMessages(messages),
+          messages: buildOpenAIMessages(messages, profile),
         });
         return r.choices[0]?.message?.content ?? "";
       },
@@ -481,7 +530,7 @@ export async function chatComplete(messages: ChatMessage[]): Promise<string> {
           model: GROQ_CHAT_MODEL,
           max_tokens: 4096,
           temperature: 0.7,
-          messages: buildOpenAIMessages(messages),
+          messages: buildOpenAIMessages(messages, profile),
         });
         return r.choices[0]?.message?.content ?? "";
       },
@@ -796,6 +845,7 @@ export async function summarizeConversation(messages: ChatMessage[]): Promise<st
 export async function chatCompleteStream(
   messages: ChatMessage[],
   onChunk: (text: string) => void,
+  profile?: UserProfile,
 ): Promise<string> {
   const cached = getCachedResponse(messages);
   if (cached) {
@@ -804,7 +854,7 @@ export async function chatCompleteStream(
     return cached;
   }
 
-  const oaiMessages = buildOpenAIMessages(messages);
+  const oaiMessages = buildOpenAIMessages(messages, profile);
   const orAvail =
     !!process.env.AI_INTEGRATIONS_OPENROUTER_API_KEY ||
     !!process.env.OPENROUTER_API_KEY;

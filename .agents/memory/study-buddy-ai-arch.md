@@ -16,12 +16,15 @@ pingOne uses max_tokens:1 — can show "Active" even when credits exhausted for 
 tryProvider() fast-fails on isAuthError || isQuota || isRateLimited — skips retry loop so fallback chain reaches next provider immediately.
 
 ## System Prompt & File Context
-buildSystemPrompt() wraps SYSTEM_PROMPT_BASE with a live date header.
-SYSTEM_PROMPT_BASE now defines an elite Ivy-League academic coach persona (not a chatbot): Socratic method, markdown tables for structure, layered depth, subject-specific rigor protocols, Uncertainty Protocol (never assert unverified facts), and calibrated motivation. Quiz Redirect Rule is NON-NEGOTIABLE.
-buildOpenAIMessages() merges all [FILE_CONTEXT] system messages from the conversation INTO the system prompt (not as separate user turns). Previous design put them as user-role messages creating consecutive user messages that confused models. Correct pattern:
-  systemContent = buildSystemPrompt() + "\n\n---\n**Uploaded File Context**\n\n" + contextMessages.map(m => m.content).join(...)
+buildSystemPrompt(profile?: UserProfile) accepts optional user context — injects a STUDENT PROFILE block at the end of the system prompt when populated. Fields: displayName, currentStreak, bestStreak, bestScore, lastActiveDate, weakSubjects[].
+SYSTEM_PROMPT_BASE defines an elite Ivy-League academic coach persona (not a chatbot): Socratic method, markdown tables for structure, layered depth, subject-specific rigor protocols, Uncertainty Protocol (never assert unverified facts), and calibrated motivation. Quiz Redirect Rule is NON-NEGOTIABLE.
+buildOpenAIMessages(messages, profile?) passes profile to buildSystemPrompt and merges all [FILE_CONTEXT] system messages from the conversation INTO the system prompt (not as separate user turns). Correct pattern:
+  systemContent = buildSystemPrompt(profile) + "\n\n---\n**Uploaded File Context**\n\n" + contextMessages.map(m => m.content).join(...)
   Then conversationMessages (user/assistant only) follow in order.
-This ensures PDF and image context always reaches the AI at highest priority for ALL follow-up questions.
+chatComplete(messages, profile?) and chatCompleteStream(messages, onChunk, profile?) both accept UserProfile and forward it to buildOpenAIMessages.
+WEAKNESS INJECTION: chat.ts (route) fetches user weaknesses from quiz_attempts via getCachedWeaknesses(userId) with a 5-min in-memory cache (weaknessCache Map<number, WeaknessCache>). Profile built from req.user + weakness cache. Injected into BOTH /chat and /chat/stream endpoints.
+UserProfile exported from ai.ts. UserState in api-client-react and api-zod schemas now includes email?, displayName? (added manually — these are handwritten schemas, not orval generated).
+MessageList receives displayName?: string|null prop — welcome greeting shows "Hey, {name}! Ready to study?" when name available.
 
 ## Spaced Repetition — Supabase write-through
 lib/review-schedule.ts: in-memory store + Supabase `review_schedules` table.
