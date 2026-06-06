@@ -12,11 +12,13 @@ import { PaymentModal } from "@/components/payment-modal";
 import { usePaymentModal } from "@/hooks/use-payment-modal";
 import { useToast } from "@/hooks/use-toast";
 import { useFeatureFlags } from "@/hooks/use-feature-flags";
+import { useAnalytics } from "@/contexts/analytics-context";
 
 export default function QuizPage() {
   const [state, setState] = useState<"form" | "running" | "results">("form");
   const { toast } = useToast();
   const paymentModal = usePaymentModal();
+  const { trackEvent } = useAnalytics();
   const { refetch: refetchMe } = useGetMe();
   const [, setLocation] = useLocation();
   const { flags } = useFeatureFlags();
@@ -87,6 +89,7 @@ export default function QuizPage() {
       },
       {
         onSuccess: (quiz: Quiz) => {
+          trackEvent("Quiz Generated", { subject: quiz.subject, difficulty: quiz.difficulty, questions: quiz.questions.length });
           setActiveQuiz(quiz);
           setAnswers({});
           answersRef.current = {};
@@ -134,6 +137,7 @@ export default function QuizPage() {
       },
       {
         onSuccess: (res: QuizResult) => {
+          trackEvent("Quiz Submitted", { score: res.score, total: res.total, percent: Math.round(res.percent) });
           setQuizResult(res);
           setState("results");
           refetchMe();

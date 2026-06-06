@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { ChatHistoryProvider } from "@/hooks/use-chat-history";
+import { AnalyticsProvider } from "@/contexts/analytics-context";
 import { MotivationalSplash } from "@/components/motivational-splash";
 import { AnnouncementBanner } from "@/components/announcement-banner";
 import { FeedbackButton } from "@/components/feedback-button";
@@ -98,6 +99,7 @@ function App() {
     <ErrorBoundary>
       <QueryClientProvider client={queryClient}>
         <TooltipProvider>
+          <AnalyticsProvider>
           <ChatHistoryProvider>
             <div className="h-[100dvh] overflow-hidden flex flex-col">
               <OfflineBanner />
@@ -110,6 +112,7 @@ function App() {
             </div>
             <Toaster />
           </ChatHistoryProvider>
+          </AnalyticsProvider>
         </TooltipProvider>
       </QueryClientProvider>
     </ErrorBoundary>

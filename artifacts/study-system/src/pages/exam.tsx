@@ -16,6 +16,7 @@ import { PaymentModal } from "@/components/payment-modal";
 import { usePaymentModal } from "@/hooks/use-payment-modal";
 import { useToast } from "@/hooks/use-toast";
 import { useFeatureFlags } from "@/hooks/use-feature-flags";
+import { useAnalytics } from "@/contexts/analytics-context";
 
 const BASE = import.meta.env.BASE_URL as string;
 
@@ -94,6 +95,7 @@ export default function ExamPage() {
   const [state, setState] = useState<ExamState>("form");
   const { toast } = useToast();
   const paymentModal = usePaymentModal();
+  const { trackEvent } = useAnalytics();
   const { data: user, refetch: refetchMe } = useGetMe();
   const [, setLocation] = useLocation();
   const { flags } = useFeatureFlags();
@@ -418,6 +420,7 @@ export default function ExamPage() {
       }
 
       const result = await res.json() as QuizResult;
+      trackEvent("Exam Submitted", { subject: quiz.subject, score: result.score, total: result.total, percent: Math.round(result.percent) });
       setQuizResult(result);
       setState("results");
       refetchMe();

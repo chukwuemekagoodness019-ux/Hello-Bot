@@ -1,5 +1,6 @@
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
+import { useAnalytics } from "@/contexts/analytics-context";
 import {
   Flame, TrendingDown, Map, ChevronRight, ArrowLeft,
   MessageSquare, GraduationCap, FileText, BarChart2,
@@ -372,7 +373,10 @@ export default function DashboardPage() {
       });
   }, []);
 
+  const { trackEvent } = useAnalytics();
+
   const handleRemediate = (subject: string) => {
+    trackEvent("Weakness Remediated", { subject });
     const prompt = `I need help with ${subject}. My average score on this topic is below 70%. Please give me a targeted review with explanations and examples to help me improve.`;
     setLocation(`/?ep=${encodeURIComponent(prompt)}`);
   };

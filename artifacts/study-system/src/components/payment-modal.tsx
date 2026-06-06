@@ -7,6 +7,7 @@ import { useState, useEffect } from "react";
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 import { Label } from "@/components/ui/label";
+import { useAnalytics } from "@/contexts/analytics-context";
 
 const BASE = import.meta.env.BASE_URL as string;
 
@@ -19,6 +20,7 @@ export function PaymentModal() {
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
   const { toast } = useToast();
+  const { trackEvent } = useAnalytics();
 
   useEffect(() => {
     if (isOpen) {
@@ -69,6 +71,7 @@ export function PaymentModal() {
         return;
       }
 
+      trackEvent("Payment Proof Uploaded", { plan: selectedPlan, hasScreenshot: screenshot !== null });
       setSuccess(true);
     } catch {
       toast({ title: "Network error. Please try again.", variant: "destructive" });

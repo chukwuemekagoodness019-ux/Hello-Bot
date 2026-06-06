@@ -39,11 +39,16 @@ app.use(
 // Set CORS_ORIGIN to a comma-separated list of allowed origins, e.g.:
 //   CORS_ORIGIN=https://yourdomain.replit.app,https://www.yourdomain.com
 //
+// FRONTEND_URL is also honoured as a single-origin alias (useful for custom
+// .com/.ng domains attached later — set it in Render env vars without code changes).
+//
 // localhost and 127.0.0.1 on any port are always allowed for local dev.
 // Same-origin requests (no Origin header) are always allowed.
 // ---------------------------------------------------------------------------
-const _configuredOrigins = (process.env.CORS_ORIGIN ?? "")
-  .split(",")
+const _configuredOrigins = [
+  ...(process.env.CORS_ORIGIN ?? "").split(","),
+  ...(process.env.FRONTEND_URL ? [process.env.FRONTEND_URL] : []),
+]
   .map((s) => s.trim())
   .filter(Boolean);
 
