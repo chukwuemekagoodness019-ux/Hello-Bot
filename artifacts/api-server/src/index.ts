@@ -7,6 +7,7 @@ import { initErrorLog } from "./lib/error-log";
 import { initExamStore } from "./lib/exam-store";
 import { initExamLimits } from "./lib/exam-limits";
 import { initReviewSchedules } from "./lib/review-schedule";
+import { initAcademicTables } from "./lib/init-academic-tables";
 
 const rawPort = process.env["PORT"];
 
@@ -25,6 +26,7 @@ if (Number.isNaN(port) || port <= 0) {
 // Bootstrap persistent stores from Supabase (graceful: falls back to
 // in-memory defaults if tables have not been created yet).
 Promise.all([
+  initAcademicTables(),
   initFlags(),
   initAnnouncements(),
   initRejectionReasons(),

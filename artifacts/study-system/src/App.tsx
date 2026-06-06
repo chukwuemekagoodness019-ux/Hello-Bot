@@ -17,6 +17,7 @@ import ExamPage from "@/pages/exam";
 import AdminPage from "@/pages/admin";
 import AuthPage from "@/pages/auth";
 import DashboardPage from "@/pages/dashboard";
+import ProfilePage from "@/pages/profile";
 
 const BASE = import.meta.env.BASE_URL as string;
 
@@ -41,6 +42,7 @@ function AppRoutes() {
           <Route path="/quiz" component={QuizPage} />
           <Route path="/exam" component={ExamPage} />
           <Route path="/dashboard" component={DashboardPage} />
+          <Route path="/profile" component={ProfilePage} />
           <Route path="/system-core" component={AdminPage} />
           <Route component={NotFound} />
         </Switch>

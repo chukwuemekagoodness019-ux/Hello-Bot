@@ -11,6 +11,7 @@ import controlRouter from "./control";
 import userMessagesRouter from "./user-messages";
 import conversationsRouter from "./conversations";
 import dashboardRouter from "./dashboard";
+import profileRouter from "./profile";
 
 const router: IRouter = Router();
 
@@ -26,5 +27,6 @@ router.use(controlRouter);
 router.use(userMessagesRouter);
 router.use(conversationsRouter);
 router.use(dashboardRouter);
+router.use(profileRouter);
 
 export default router;

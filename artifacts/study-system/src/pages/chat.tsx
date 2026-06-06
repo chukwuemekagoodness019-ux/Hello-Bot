@@ -8,7 +8,7 @@ import { PwaInstallButton } from "@/components/pwa-install-button";
 import { PwaInstallBanner } from "@/components/pwa-install-banner";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
 import { useIsOffline } from "@/components/offline-banner";
-import { Menu, Flame, Plus, GraduationCap, FileText, MessageSquare, Bell, X, BarChart2 } from "lucide-react";
+import { Menu, Flame, Plus, GraduationCap, FileText, MessageSquare, Bell, X, BarChart2, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import { useChatHistory } from "@/hooks/use-chat-history";
@@ -602,6 +602,15 @@ export default function ChatPage() {
                 <GraduationCap className="w-5 h-5" />
               </Button>
             </Link>
+            <Link href="/profile">
+              <Button
+                size="icon"
+                className="w-9 h-9 rounded-full bg-white/5 hover:bg-white/10 text-slate-400 hover:text-slate-200 border border-white/10 transition-transform active:scale-95"
+                title="Academic Profile"
+              >
+                <User className="w-4 h-4" />
+              </Button>
+            </Link>
           </div>
         </header>
 
@@ -683,6 +692,13 @@ export default function ChatPage() {
         >
           <BarChart2 className="w-5 h-5" />
           <span className="text-[10px] font-medium">Stats</span>
+        </button>
+        <button
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors"
+          onClick={() => setLocation("/profile")}
+        >
+          <User className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Profile</span>
         </button>
       </nav>
 

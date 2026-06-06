@@ -201,6 +201,16 @@ When a [FILE_CONTEXT:pdf] message is present in this conversation:
 - Without an uploaded document, apply the standard Socratic coaching persona without modification.`;
 
 
+export interface AcademicProfile {
+  institution?: string | null;
+  department?: string | null;
+  academicLevel?: string | null;
+  semester?: string | null;
+  studyGoals?: string | null;
+  examDates?: string | null;
+  weeklySchedule?: string | null;
+}
+
 export interface UserProfile {
   displayName?: string | null;
   currentStreak?: number;
@@ -208,7 +218,39 @@ export interface UserProfile {
   bestScore?: number;
   lastActiveDate?: string | null;
   weakSubjects?: Array<{ subject: string; avgPercent: number }>;
+  academicProfile?: AcademicProfile | null;
+  courses?: Array<{ courseCode: string; courseTitle: string }>;
 }
+
+// ---------------------------------------------------------------------------
+// Phase 5 — Platform feature awareness (static, always injected).
+// The AI is trained to guide users to real features rather than improvising.
+// ---------------------------------------------------------------------------
+const PLATFORM_AWARENESS_BLOCK = `
+
+---
+**PLATFORM CAPABILITIES (INTERNAL — guide users to real features; never invent features that don't exist):**
+This platform has the following built-in tools. When relevant, guide users to them naturally:
+
+1. **Quiz Generator** (Quiz tab in navigation) — generates structured practice quizzes. Student selects subject, difficulty (easy/medium/hard), question type (MCQ, theory, fill-in-the-blank), and a timer. When the user asks for quiz questions or "test me on something", redirect them here rather than generating inline questions (this is already enforced above in the Quiz Redirect Rule).
+
+2. **Exam Generator** (Exam tab) — generates a formal, timed exam with anti-cheat detection (tab-switching and split-screen monitoring). Calculates an ERI (Exam Readiness Index). Suitable for full exam simulation before real assessments.
+
+3. **Dashboard** (Stats tab) — shows current study streak, personal best scores, identified weak subjects (below 70% average), recent quiz history, and AI-generated study roadmaps. When a user asks "how am I doing?" or "where are my weak areas?", direct them to the Dashboard.
+
+4. **PDF & Image Upload** (attachment button in chat) — students can upload PDFs or images. The AI extracts text and uses OCR for scanned documents. The uploaded content becomes the active reference for the conversation.
+
+5. **Ask My Notes** — when a student asks a retrospective question about previously uploaded documents (e.g., "what did my notes say about enzymes?"), the AI automatically retrieves content from all past uploaded PDFs.
+
+6. **Voice Input** (microphone button in chat) — students can speak questions. The AI responds with concise, spoken-friendly answers.
+
+7. **Study Roadmap** (auto-generated) — when a student mentions a specific exam deadline (e.g., "my exam in 2 weeks"), the AI generates a structured day-by-day roadmap that appears in the Dashboard.
+
+8. **Academic Profile** (Profile section) — students can register their institution, department, academic level, semester, and course list. The AI uses this to personalize coaching automatically.
+
+9. **Premium Upgrade** — unlocks unlimited daily messages, quizzes, and voice inputs. Free users have a daily message limit.
+
+When a user asks if the platform can do something that IS implemented above, explain how to use it. When they ask about something NOT implemented, say so honestly rather than improvising.`;
 
 function buildSystemPrompt(profile?: UserProfile): string {
   const today = new Date().toLocaleDateString("en-NG", {
@@ -253,10 +295,49 @@ function buildSystemPrompt(profile?: UserProfile): string {
     }
   }
 
+  // Phase 3 & 4 — Academic context + coaching layer
+  let academicBlock = "";
+  const ap = profile?.academicProfile;
+  const hasCourses = (profile?.courses?.length ?? 0) > 0;
+  if (ap || hasCourses) {
+    const acLines: string[] = [];
+    if (ap?.institution) acLines.push(`Institution: ${ap.institution}`);
+    if (ap?.department) acLines.push(`Department / Field of Study: ${ap.department}`);
+    if (ap?.academicLevel) acLines.push(`Academic Level: ${ap.academicLevel}`);
+    if (ap?.semester) acLines.push(`Current Semester: ${ap.semester}`);
+    if (hasCourses) {
+      const courseList = profile!.courses!.map((c) => `${c.courseCode} (${c.courseTitle})`).join(", ");
+      acLines.push(`Registered Courses: ${courseList}`);
+    }
+    if (ap?.studyGoals) acLines.push(`Study Goals: ${ap.studyGoals}`);
+    if (ap?.examDates) acLines.push(`Upcoming Exams / Key Dates: ${ap.examDates}`);
+    if (ap?.weeklySchedule) acLines.push(`Weekly Study Schedule: ${ap.weeklySchedule}`);
+
+    if (acLines.length > 0) {
+      const firstCourse = hasCourses ? profile!.courses![0].courseCode : null;
+      academicBlock =
+        `\n\n---\n**STUDENT ACADEMIC CONTEXT (INTERNAL — use to personalize coaching; never quote these fields verbatim to the student):**\n` +
+        acLines.join("\n") +
+        `\n\nAcademic coaching directives:\n` +
+        (hasCourses && firstCourse
+          ? `- When a topic directly relates to a registered course, you may briefly note the connection (e.g., "This is relevant to your ${firstCourse} coursework") — only when genuinely applicable, at most once per topic, never forced or repetitive.\n`
+          : "") +
+        (ap?.department
+          ? `- When multiple domain examples are equally valid, prefer examples from ${ap.department} for maximum relevance.\n`
+          : "") +
+        (hasCourses
+          ? `- For topics matching a registered course, invest maximum coaching depth.\n`
+          : "") +
+        `- Answer ALL academic questions regardless of whether they match registered courses — this profile personalizes coaching; it never restricts it.`;
+    }
+  }
+
   return (
     `**Current Date:** Today is ${today}. Use this for any question about dates, current events, or "what day is it." Your training has a knowledge cutoff — for very recent events always say "I may not have the latest information on this — please verify from a current source."\n\n` +
     SYSTEM_PROMPT_BASE +
-    profileBlock
+    profileBlock +
+    academicBlock +
+    PLATFORM_AWARENESS_BLOCK
   );
 }
 

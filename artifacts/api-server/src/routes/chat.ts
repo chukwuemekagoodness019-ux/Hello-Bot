@@ -3,6 +3,7 @@ import { sessionMiddleware, isPremiumActive, LIMITS } from "../lib/session";
 import { updateUser } from "../lib/db-users";
 import type { User } from "../lib/db-users";
 import { getWeaknesses } from "../lib/db-dashboard";
+import { getProfileForAI } from "../lib/db-profile";
 import { SendChatBody } from "@workspace/api-zod";
 import { chatComplete, chatCompleteStream, summarizeConversation, STREAM_FALLBACK, FALLBACK_MESSAGE } from "../lib/ai";
 import type { ChatMessage, UserProfile } from "../lib/ai";
@@ -31,7 +32,11 @@ async function getCachedWeaknesses(userId: number): Promise<Array<{ subject: str
   }
 }
 
-function buildProfile(u: User, weakSubjects: Array<{ subject: string; avgPercent: number }>): UserProfile {
+function buildProfile(
+  u: User,
+  weakSubjects: Array<{ subject: string; avgPercent: number }>,
+  academic: { profile: { institution: string | null; department: string | null; academicLevel: string | null; semester: string | null; studyGoals: string | null; examDates: string | null; weeklySchedule: string | null } | null; courses: Array<{ courseCode: string; courseTitle: string }> },
+): UserProfile {
   return {
     displayName: u.displayName ?? null,
     currentStreak: u.currentStreak,
@@ -39,6 +44,18 @@ function buildProfile(u: User, weakSubjects: Array<{ subject: string; avgPercent
     bestScore: u.bestScore,
     lastActiveDate: u.lastActiveDate ?? null,
     weakSubjects,
+    academicProfile: academic.profile
+      ? {
+          institution: academic.profile.institution ?? undefined,
+          department: academic.profile.department ?? undefined,
+          academicLevel: academic.profile.academicLevel ?? undefined,
+          semester: academic.profile.semester ?? undefined,
+          studyGoals: academic.profile.studyGoals ?? undefined,
+          examDates: academic.profile.examDates ?? undefined,
+          weeklySchedule: academic.profile.weeklySchedule ?? undefined,
+        }
+      : null,
+    courses: academic.courses,
   };
 }
 
@@ -77,8 +94,11 @@ router.post("/chat", sessionMiddleware, async (req, res, next) => {
       return;
     }
 
-    const weakSubjects = await getCachedWeaknesses(Number(u.id));
-    const profile = buildProfile(u, weakSubjects);
+    const [weakSubjects, academic] = await Promise.all([
+      getCachedWeaknesses(Number(u.id)),
+      getProfileForAI(Number(u.id)),
+    ]);
+    const profile = buildProfile(u, weakSubjects, academic);
     const reply = await chatComplete(messages, profile);
 
     if (reply !== FALLBACK_MESSAGE) {
@@ -146,8 +166,11 @@ router.post("/chat/stream", sessionMiddleware, async (req, res, next) => {
       }
     }, 15_000);
 
-    const weakSubjects = await getCachedWeaknesses(Number(u.id));
-    const profile = buildProfile(u, weakSubjects);
+    const [weakSubjects, academic] = await Promise.all([
+      getCachedWeaknesses(Number(u.id)),
+      getProfileForAI(Number(u.id)),
+    ]);
+    const profile = buildProfile(u, weakSubjects, academic);
 
     let fullReply = "";
 
