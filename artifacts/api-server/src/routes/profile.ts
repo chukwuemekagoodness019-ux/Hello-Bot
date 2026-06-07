@@ -43,6 +43,12 @@ router.get("/profile", sessionMiddleware, async (req, res, next) => {
     const { profile, courses } = await getFullProfile(Number(req.user!.id));
     res.json({ profile: profile ? serializeProfile(profile) : null, courses: courses.map(serializeCourse) });
   } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    // Gracefully handle missing tables (migration not yet applied) — return empty profile
+    if (msg.includes("does not exist") || msg.includes("PGRST")) {
+      res.json({ profile: null, courses: [] });
+      return;
+    }
     next(err);
   }
 });

@@ -625,6 +625,7 @@ export default function ChatPage() {
             streamingMessage={activeStreamingContent}
             error={localError}
             onRetry={handleRetry}
+            onSend={handleSend}
             streak={user?.streak?.currentStreak}
             displayName={user?.displayName ?? null}
             lastStudied={lastStudied}

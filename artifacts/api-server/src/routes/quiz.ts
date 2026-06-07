@@ -171,7 +171,7 @@ router.post("/exam/submit", sessionMiddleware, async (req, res, next) => {
       res.status(409).json({ error: "This exam has reached its maximum number of participants.", code: "ATTEMPT_LIMIT" });
       return;
     }
-    const answerMap = new Map<string, string>(answers.map((a) => [a.questionId, a.answer ?? ""]));
+    const answerMap = new Map<string, string>(answers.map((a: { questionId: string; answer?: string | null }) => [a.questionId, a.answer ?? ""]));
     let score = 0;
     const results = stored.questions.map((q) => {
       const userAnswer = answerMap.get(q.id) ?? "";
@@ -222,7 +222,7 @@ router.post("/quiz/submit", sessionMiddleware, async (req, res, next) => {
     const { quizId, subject, answers } = parsed.data;
     const stored = quizStore.get(quizId);
     if (!stored || stored.userId !== u.id) { res.status(404).json({ error: "Quiz not found or expired", code: "QUIZ_NOT_FOUND" }); return; }
-    const answerMap = new Map<string, string>(answers.map((a) => [a.questionId, a.answer ?? ""]));
+    const answerMap = new Map<string, string>(answers.map((a: { questionId: string; answer?: string | null }) => [a.questionId, a.answer ?? ""]));
     let score = 0;
     const results = stored.questions.map((q) => {
       const userAnswer = answerMap.get(q.id) ?? "";

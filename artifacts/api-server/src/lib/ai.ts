@@ -236,7 +236,7 @@ This platform has the following built-in tools. When relevant, guide users to th
 
 2. **Exam Generator** (Exam tab) — generates a formal, timed exam with anti-cheat detection (tab-switching and split-screen monitoring). Calculates an ERI (Exam Readiness Index). Suitable for full exam simulation before real assessments.
 
-3. **Dashboard** (Stats tab) — shows current study streak, personal best scores, identified weak subjects (below 70% average), recent quiz history, and AI-generated study roadmaps. When a user asks "how am I doing?" or "where are my weak areas?", direct them to the Dashboard.
+3. **Dashboard** (Stats tab) — shows current study streak, personal best scores, weak subjects (below 70% average), strong topics (above 80% average), study consistency (active days this week), registered courses with quick-Quiz access, upcoming exam dates from your Academic Profile, recent quiz history, and AI-generated study roadmaps. When a user asks "how am I doing?", "what's my progress?", or "where are my weak areas?", direct them to the Dashboard.
 
 4. **PDF & Image Upload** (attachment button in chat) — students can upload PDFs or images. The AI extracts text and uses OCR for scanned documents. The uploaded content becomes the active reference for the conversation.
 
@@ -328,7 +328,7 @@ function buildSystemPrompt(profile?: UserProfile): string {
         (hasCourses
           ? `- For topics matching a registered course, invest maximum coaching depth.\n`
           : "") +
-        `- Answer ALL academic questions regardless of whether they match registered courses — this profile personalizes coaching; it never restricts it.`;
+        `- Answer ALL academic questions regardless of whether they match registered courses — this profile personalizes coaching; it never restricts it.\n- Never open a response by reciting profile data back to the student (e.g., avoid starting with "As an [institution] student..." or "Given your background in [department]...") — integrate context naturally within the answer, only when genuinely useful.`;
     }
   }
 

@@ -14,6 +14,7 @@ interface MessageListProps {
   streamingMessage?: string;
   error?: string | null;
   onRetry?: () => void;
+  onSend?: (text: string) => void;
   streak?: number;
   displayName?: string | null;
   lastStudied?: { subject: string; date: string } | null;
@@ -288,6 +289,7 @@ export function MessageList({
   streamingMessage,
   error,
   onRetry,
+  onSend,
   streak,
   displayName,
   lastStudied,
@@ -466,10 +468,18 @@ export function MessageList({
         </div>
 
         <div className="flex flex-wrap justify-center gap-2 mt-1">
-          {["📝 Explain a concept", "📄 Upload my notes", "🎯 Quiz me now"].map((chip) => (
-            <span key={chip} className="text-xs px-3 py-1.5 rounded-full border border-white/10 text-slate-400 bg-white/[0.04] select-none">
-              {chip}
-            </span>
+          {[
+            { label: "📝 Explain a concept", msg: "Can you explain a key concept for me?" },
+            { label: "📄 Upload my notes", msg: "I want to study from my PDF or notes — how do I upload them?" },
+            { label: "🎯 Quiz me now", msg: "Quiz me on my recent study topics." },
+          ].map(({ label, msg }) => (
+            <button
+              key={label}
+              onClick={() => onSend?.(msg)}
+              className="text-xs px-3 py-1.5 rounded-full border border-white/10 text-slate-400 bg-white/[0.04] hover:bg-white/[0.08] hover:text-slate-200 hover:border-white/20 transition-colors cursor-pointer"
+            >
+              {label}
+            </button>
           ))}
         </div>
       </div>

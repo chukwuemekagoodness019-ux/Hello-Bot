@@ -67,10 +67,37 @@ localhost + 127.0.0.1 always allowed. Same-origin (no Origin header) always allo
 
 ## Dashboard page (`/dashboard`)
 - Route added to App.tsx and bottom nav of chat page (BarChart2 icon, "Stats" label).
-- Fetches GET /api/dashboard: streak + weaknesses (avg<70% last 30d) + recentAttempts.
-- Backend: `routes/dashboard.ts` + `lib/db-dashboard.ts` (queries quiz_attempts table).
+- Fetches GET /api/dashboard: streak + weaknesses (avg<70% last 30d) + recentAttempts + strongTopics + studyConsistency + courses + examDates.
+- Backend: `routes/dashboard.ts` + `lib/db-dashboard.ts` (getQuizStats() → single query returns weaknesses+strongTopics+studyConsistency).
 - "Remediate" button navigates to `/?ep=encodeURIComponent(prompt)` (same URL param as exam handoff).
 - Active roadmaps read from localStorage keys `roadmap_<fingerprint>`.
+- Widgets: ActiveCoursesWidget (empty→CTA to /profile), UpcomingExamsWidget, StrongTopicsWidget, StreakBanner (with consistency bar), welcome banner for new users.
+- Mobile nav on dashboard has 5 items: Chat, Quiz, Exam, Stats (active), Profile — matching chat page nav.
+- Profile icon in dashboard header + chat header (User icon) + mobile nav 5th item.
+
+## Academic Profile System
+- Routes: GET/PUT /api/profile, GET/POST/PUT/DELETE /api/profile/courses.
+- Supabase REST (not local pg pool) — tables: academic_profiles, courses.
+- Migration 004_academic_profile.sql must be applied manually via Supabase dashboard.
+- GET /profile returns { profile: null, courses: [] } gracefully when tables don't exist (no 500).
+- Mutation routes (PUT/POST/DELETE) surface error messages via throwIfError — caught by frontend toast.
+- Profile accessible via: chat header User icon, mobile nav "Profile" tab (all pages), dashboard header User icon, dashboard empty courses CTA.
+
+## Smart Reminders (Phases 2+3)
+- review-schedule.ts: generateIntelligentReminders() with anti-spam gates: 6h check interval, 48h per-key resend cooldown, max 2 reminders per call.
+- Dispatches interval-aware messages (24h/3-day/7-day variants from reviewMessage()).
+- Called fire-and-forget alongside checkAndDispatchDueReviews in GET /api/user/messages.
+- Reminders surface via bell icon with red unread badge in chat header → admin messages panel.
+
+## Feature Discoverability (Phase 6.5)
+- MessageList empty state: starter chips (Explain / Upload / Quiz) are now clickable buttons wired to onSend prop.
+- chat.tsx passes onSend={handleSend} to MessageList.
+- All 10 features visible: Chat, PDF/Image upload, Voice, Quiz, Exam, Dashboard, Streak, Profile, Reminders (bell), Ask My Notes (chip).
+
+## Course-Aware AI Coaching (Phase 4+5)
+- PLATFORM_AWARENESS_BLOCK in ai.ts: updated dashboard description.
+- Academic coaching block: anti-repetition directive added.
+- getProfileForAI imported from db-profile in review-schedule.ts to enrich reminder context.
 
 ## Exam → Chat handoff (URL param)
 - Changed from sessionStorage to URL param: `setLocation("/?ep=encodeURIComponent(prompt)")`.
