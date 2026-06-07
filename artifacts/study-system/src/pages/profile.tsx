@@ -2,6 +2,7 @@ import { useState, useEffect, useCallback } from "react";
 import { useLocation } from "wouter";
 import {
   ArrowLeft, Plus, Pencil, Trash2, Save, User, BookOpen, Loader2, Check,
+  Home, MessageSquare, GraduationCap, FileText,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -484,6 +485,24 @@ export default function ProfilePage() {
           )}
         </section>
       </div>
+      {/* Mobile bottom nav */}
+      <nav className="fixed bottom-0 inset-x-0 z-20 border-t border-white/8 flex md:hidden nav-safe" style={{ background: "rgba(9,5,20,0.98)" }}>
+        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/")}>
+          <Home className="w-5 h-5" /><span className="text-[10px] font-medium">Home</span>
+        </button>
+        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/chat")}>
+          <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
+        </button>
+        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/quiz")}>
+          <GraduationCap className="w-5 h-5" /><span className="text-[10px] font-medium">Quiz</span>
+        </button>
+        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/exam")}>
+          <FileText className="w-5 h-5" /><span className="text-[10px] font-medium">Exam</span>
+        </button>
+        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-primary">
+          <User className="w-5 h-5" /><span className="text-[10px] font-medium">Profile</span>
+        </button>
+      </nav>
     </div>
   );
 }

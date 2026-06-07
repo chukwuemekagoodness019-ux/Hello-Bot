@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
-import { ChevronLeft, AlertCircle, Loader2, Clock, MessageSquare, GraduationCap, FileText, BarChart2 } from "lucide-react";
+import { ChevronLeft, AlertCircle, Loader2, Clock, Home, MessageSquare, GraduationCap, FileText, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
@@ -167,7 +167,7 @@ export default function QuizPage() {
     return (
       <div className="h-full chat-page-bg text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
         <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-black/30 backdrop-blur-sm sticky top-0 z-30">
-          <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
+          <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/chat", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
           </button>
           <span className="font-semibold text-sm flex items-center gap-1.5 text-slate-100">
@@ -184,6 +184,9 @@ export default function QuizPage() {
         </main>
         <nav className="fixed bottom-0 inset-x-0 z-20 border-t border-white/8 flex md:hidden nav-safe" style={{ background: "rgba(9,5,20,0.98)" }}>
           <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/", { replace: true })}>
+            <Home className="w-5 h-5" /><span className="text-[10px] font-medium">Home</span>
+          </button>
+          <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/chat", { replace: true })}>
             <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
           </button>
           <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-primary">
@@ -191,6 +194,9 @@ export default function QuizPage() {
           </button>
           <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/exam", { replace: true })}>
             <FileText className="w-5 h-5" /><span className="text-[10px] font-medium">Exam</span>
+          </button>
+          <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/profile", { replace: true })}>
+            <User className="w-5 h-5" /><span className="text-[10px] font-medium">Profile</span>
           </button>
         </nav>
       </div>
@@ -202,7 +208,7 @@ export default function QuizPage() {
       <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-black/30 backdrop-blur-sm sticky top-0 z-30">
         <button
           className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors"
-          onClick={() => setLocation("/", { replace: true })}
+          onClick={() => setLocation("/chat", { replace: true })}
         >
           <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
         </button>
@@ -400,17 +406,17 @@ export default function QuizPage() {
             >
               <div className="p-5 flex flex-col items-center text-center gap-3">
                 <div className="w-10 h-10 rounded-xl bg-indigo-500/10 ring-1 ring-indigo-500/25 flex items-center justify-center">
-                  <BarChart2 className="w-5 h-5 text-indigo-400" />
+                  <Home className="w-5 h-5 text-indigo-400" />
                 </div>
                 <div>
                   <p className="text-sm font-semibold text-slate-100 mb-0.5">Track your full academic progress</p>
                   <p className="text-xs text-slate-400">Your score has been logged. View streaks, weak areas, and active roadmaps on your dashboard.</p>
                 </div>
                 <button
-                  onClick={() => setLocation("/dashboard")}
+                  onClick={() => setLocation("/")}
                   className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600/80 to-violet-600/80 hover:from-indigo-500/90 hover:to-violet-500/90 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 active:scale-[0.98] ring-1 ring-indigo-500/30"
                 >
-                  <BarChart2 className="w-4 h-4" />
+                  <Home className="w-4 h-4" />
                   View Academic Dashboard →
                 </button>
               </div>
@@ -425,6 +431,9 @@ export default function QuizPage() {
 
       <nav className="fixed bottom-0 inset-x-0 z-20 border-t border-white/8 flex md:hidden nav-safe" style={{ background: "rgba(9,5,20,0.98)" }}>
         <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/", { replace: true })}>
+          <Home className="w-5 h-5" /><span className="text-[10px] font-medium">Home</span>
+        </button>
+        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/chat", { replace: true })}>
           <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
         </button>
         <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-primary">
@@ -433,8 +442,8 @@ export default function QuizPage() {
         <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/exam", { replace: true })}>
           <FileText className="w-5 h-5" /><span className="text-[10px] font-medium">Exam</span>
         </button>
-        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/dashboard", { replace: true })}>
-          <BarChart2 className="w-5 h-5" /><span className="text-[10px] font-medium">Stats</span>
+        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/profile", { replace: true })}>
+          <User className="w-5 h-5" /><span className="text-[10px] font-medium">Profile</span>
         </button>
       </nav>
 

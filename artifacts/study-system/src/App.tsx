@@ -38,7 +38,8 @@ function AppRoutes() {
       {!isAdmin && <AnnouncementBanner />}
       <div className="flex-1 min-h-0 relative">
         <Switch>
-          <Route path="/" component={ChatPage} />
+          <Route path="/" component={DashboardPage} />
+          <Route path="/chat" component={ChatPage} />
           <Route path="/quiz" component={QuizPage} />
           <Route path="/exam" component={ExamPage} />
           <Route path="/dashboard" component={DashboardPage} />

@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { useAnalytics } from "@/contexts/analytics-context";
 import {
   Flame, TrendingDown, TrendingUp, Map, ArrowLeft,
-  MessageSquare, GraduationCap, FileText, BarChart2,
+  Home, MessageSquare, GraduationCap, FileText, BarChart2,
   Trophy, CheckCircle2, Circle, BookOpen, Calendar,
   User, Zap,
 } from "lucide-react";
@@ -408,7 +408,7 @@ export default function DashboardPage() {
   const handleRemediate = (subject: string) => {
     trackEvent("Weakness Remediated", { subject });
     const prompt = `I need help with ${subject}. My average score on this topic is below 70%. Please give me a targeted review with explanations and examples to help me improve.`;
-    setLocation(`/?ep=${encodeURIComponent(prompt)}`);
+    setLocation(`/chat?ep=${encodeURIComponent(prompt)}`);
   };
 
   const handleCourseQuiz = (courseCode: string) => {
@@ -419,7 +419,7 @@ export default function DashboardPage() {
   const handleCourseAskAI = (courseCode: string, courseTitle: string) => {
     trackEvent("Course AI Asked", { courseCode });
     const prompt = `I want to review ${courseCode} — ${courseTitle}. Can you give me a quick overview of the most important concepts I should know, then test my understanding with a few questions?`;
-    setLocation(`/?ep=${encodeURIComponent(prompt)}`);
+    setLocation(`/chat?ep=${encodeURIComponent(prompt)}`);
   };
 
   const isNewUser = data && data.recentAttempts.length === 0 && data.courses.length === 0;
@@ -429,12 +429,9 @@ export default function DashboardPage() {
       {/* Header */}
       <header className="sticky top-0 z-10 flex items-center gap-3 px-4 py-3 border-b border-white/8"
         style={{ background: "rgba(9,5,20,0.92)", backdropFilter: "blur(12px)" }}>
-        <button className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/8 transition-colors" onClick={() => setLocation("/")}>
-          <ArrowLeft className="w-5 h-5" />
-        </button>
         <div className="flex items-center gap-2">
-          <BarChart2 className="w-5 h-5 text-primary" />
-          <h1 className="font-bold text-base">Academic Dashboard</h1>
+          <Home className="w-5 h-5 text-primary" />
+          <h1 className="font-bold text-base">Home</h1>
         </div>
         <div className="ml-auto">
           <button className="p-1.5 rounded-lg text-slate-400 hover:text-slate-200 hover:bg-white/8 transition-colors" onClick={() => setLocation("/profile")}
@@ -533,7 +530,10 @@ export default function DashboardPage() {
       {/* Mobile bottom nav — 5 items matching chat page */}
       <nav className="fixed bottom-0 inset-x-0 z-20 border-t border-white/8 flex md:hidden nav-safe"
         style={{ background: "rgba(9,5,20,0.98)" }}>
-        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/")}>
+        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-primary">
+          <Home className="w-5 h-5" /><span className="text-[10px] font-medium">Home</span>
+        </button>
+        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/chat")}>
           <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
         </button>
         <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/quiz")}>
@@ -541,9 +541,6 @@ export default function DashboardPage() {
         </button>
         <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/exam")}>
           <FileText className="w-5 h-5" /><span className="text-[10px] font-medium">Exam</span>
-        </button>
-        <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-primary">
-          <BarChart2 className="w-5 h-5" /><span className="text-[10px] font-medium">Stats</span>
         </button>
         <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors" onClick={() => setLocation("/profile")}>
           <User className="w-5 h-5" /><span className="text-[10px] font-medium">Profile</span>

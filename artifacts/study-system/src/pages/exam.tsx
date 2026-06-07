@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { useLocation } from "wouter";
 import {
   ChevronLeft, Clock, Trophy, CheckCircle, XCircle, FileText,
-  MessageSquare, GraduationCap, Lock, Copy, Share2, Link2, Brain, BarChart2,
+  Home, MessageSquare, GraduationCap, Lock, Copy, Share2, Link2, Brain, BarChart2, User,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -470,7 +470,7 @@ export default function ExamPage() {
       .join(", ");
     const prompt = `I just finished an exam simulation on "${activeQuiz.subject}" and struggled with: ${topics}. Please provide a targeted breakdown of these specific topics.`;
     // Use URL param instead of sessionStorage so the prompt survives new-tab navigation.
-    setLocation(`/?ep=${encodeURIComponent(prompt)}`);
+    setLocation(`/chat?ep=${encodeURIComponent(prompt)}`);
   };
 
   const getTimerColor = () =>
@@ -486,6 +486,9 @@ export default function ExamPage() {
   const BottomNav = () => (
     <nav className="fixed bottom-0 inset-x-0 z-20 border-t border-white/8 flex md:hidden nav-safe" style={{ background: "rgba(9,5,20,0.98)" }}>
       <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
+        <Home className="w-5 h-5" /><span className="text-[10px] font-medium">Home</span>
+      </button>
+      <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/chat", { replace: true })}>
         <MessageSquare className="w-5 h-5" /><span className="text-[10px] font-medium">Chat</span>
       </button>
       <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/quiz", { replace: true })}>
@@ -494,8 +497,8 @@ export default function ExamPage() {
       <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-primary">
         <FileText className="w-5 h-5" /><span className="text-[10px] font-medium">Exam</span>
       </button>
-      <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/dashboard", { replace: true })}>
-        <BarChart2 className="w-5 h-5" /><span className="text-[10px] font-medium">Stats</span>
+      <button className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/profile", { replace: true })}>
+        <User className="w-5 h-5" /><span className="text-[10px] font-medium">Profile</span>
       </button>
     </nav>
   );
@@ -516,7 +519,7 @@ export default function ExamPage() {
     return (
       <div className="h-full chat-page-bg text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
         <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-black/30 backdrop-blur-sm sticky top-0 z-30">
-          <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
+          <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/chat", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
           </button>
           <div className="flex items-center gap-2">
@@ -541,7 +544,7 @@ export default function ExamPage() {
     return (
       <div className="h-full chat-page-bg text-slate-100 flex flex-col overflow-y-auto pb-nav-safe md:pb-0">
         <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-black/30 backdrop-blur-sm sticky top-0 z-30">
-          <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/", { replace: true })}>
+          <button className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors" onClick={() => setLocation("/chat", { replace: true })}>
             <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
           </button>
           <div className="flex items-center gap-2">
@@ -601,7 +604,7 @@ export default function ExamPage() {
       <header className="h-14 flex items-center justify-between px-4 border-b border-white/8 bg-black/30 backdrop-blur-sm sticky top-0 z-30">
         <button
           className="inline-flex items-center gap-2 text-slate-400 hover:text-slate-100 transition-colors"
-          onClick={() => setLocation("/", { replace: true })}
+          onClick={() => setLocation("/chat", { replace: true })}
         >
           <ChevronLeft className="w-5 h-5" /><span className="font-medium">Back</span>
         </button>
@@ -1080,10 +1083,10 @@ export default function ExamPage() {
                   <p className="text-xs text-slate-400">Your score has been logged. View streaks, weak areas, and active roadmaps on your dashboard.</p>
                 </div>
                 <button
-                  onClick={() => setLocation("/dashboard")}
+                  onClick={() => setLocation("/")}
                   className="w-full flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-indigo-600/80 to-violet-600/80 hover:from-indigo-500/90 hover:to-violet-500/90 px-4 py-2.5 text-sm font-semibold text-white transition-all duration-150 active:scale-[0.98] ring-1 ring-indigo-500/30"
                 >
-                  <BarChart2 className="w-4 h-4" />
+                  <Home className="w-4 h-4" />
                   View Academic Dashboard →
                 </button>
               </div>

@@ -8,7 +8,7 @@ import { PwaInstallButton } from "@/components/pwa-install-button";
 import { PwaInstallBanner } from "@/components/pwa-install-banner";
 import { usePwaInstall } from "@/hooks/use-pwa-install";
 import { useIsOffline } from "@/components/offline-banner";
-import { Menu, Flame, Plus, GraduationCap, FileText, MessageSquare, Bell, X, BarChart2, User } from "lucide-react";
+import { Menu, Flame, Plus, GraduationCap, FileText, MessageSquare, Bell, X, Home, User } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Link, useLocation } from "wouter";
 import { useChatHistory } from "@/hooks/use-chat-history";
@@ -667,6 +667,13 @@ export default function ChatPage() {
       {/* Mobile bottom nav */}
       <nav className="fixed bottom-0 inset-x-0 z-20 glass border-t border-white/8 flex md:hidden nav-safe">
         <button
+          className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors"
+          onClick={() => setLocation("/")}
+        >
+          <Home className="w-5 h-5" />
+          <span className="text-[10px] font-medium">Home</span>
+        </button>
+        <button
           className="flex-1 flex flex-col items-center justify-center gap-0.5 text-primary"
           onClick={() => setSidebarOpen(false)}
         >
@@ -686,13 +693,6 @@ export default function ChatPage() {
         >
           <FileText className="w-5 h-5" />
           <span className="text-[10px] font-medium">Exam</span>
-        </button>
-        <button
-          className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors"
-          onClick={() => setLocation("/dashboard")}
-        >
-          <BarChart2 className="w-5 h-5" />
-          <span className="text-[10px] font-medium">Stats</span>
         </button>
         <button
           className="flex-1 flex flex-col items-center justify-center gap-0.5 text-slate-500 hover:text-slate-200 transition-colors"
